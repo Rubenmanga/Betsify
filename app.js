@@ -10,6 +10,52 @@ const INTERNATIONAL_CARD_PRIOR = 1.85;
 // Valor empírico para fútbol internacional: −0.13.
 const DC_RHO = -0.13;
 
+// ClubElo: ponderar partidos según calidad del rival (Elo histórico).
+// Un rival con Elo muy alto añade peso; uno muy bajo lo reduce.
+const ELO_BASELINE = 1500;
+const ELO_CLAMP_MIN = 0.6;
+const ELO_CLAMP_MAX = 1.4;
+
+async function ceapi(team){
+  try{
+    const resp=await fetch(`/api/clubelo?team=${encodeURIComponent(team)}`);
+    if(!resp.ok)return null;
+    return resp.json();
+  }catch(_){return null}
+}
+async function ceCached(team){
+  if(state.clubelo[team])return state.clubelo[team];
+  const data=await ceapi(team);
+  if(data&&data.length){state.clubelo[team]=data}
+  return data||null;
+}
+function eloOnDate(records,date){
+  if(!records||!records.length)return null;
+  if(date){const rec=records.find(r=>r.From<=date&&date<=r.To);if(rec)return parseFloat(rec.Elo)}
+  return parseFloat(records[records.length-1].Elo)||null;
+}
+function rivalEloFactor(elo){
+  if(!elo||isNaN(elo))return 1;
+  return Math.min(ELO_CLAMP_MAX,Math.max(ELO_CLAMP_MIN,elo/ELO_BASELINE));
+}
+async function enrichRowsWithElo(rows){
+  const opponents=[...new Set(rows.map(r=>r.opponent))];
+  let enriched=0;
+  await Promise.all(opponents.map(async opp=>{
+    const records=await ceCached(opp);
+    if(!records)return;
+    for(const row of rows){
+      if(row.opponent!==opp)continue;
+      const elo=eloOnDate(records,row.date);
+      if(!elo)continue;
+      row.rivalElo=elo;
+      row.weight=Math.pow(0.9,row.rowIndex)*(row.friendly?0.55:1)*rivalEloFactor(elo);
+      enriched++;
+    }
+  }));
+  return enriched;
+}
+
 for (const key of OLD_CACHE_KEYS) { try { localStorage.removeItem(key); } catch (_) {} }
 
 function loadCache(){
@@ -19,7 +65,7 @@ function loadCache(){
   }catch(_){return{matches:{}}}
 }
 const cache=loadCache(),scheduleMemory=new Map(),summaryMemory=new Map(),sfMemory=new Map();
-const state={events:[],fixture:null,model:null,markets:[],selected:new Set(),homeName:'',awayName:'',homeRows:[],awayRows:[]};
+const state={events:[],fixture:null,model:null,markets:[],selected:new Set(),homeName:'',awayName:'',homeRows:[],awayRows:[],clubelo:{}};
 
 function saveCache(){
   const entries=Object.entries(cache.matches).sort((a,b)=>(b[1].cachedAt||0)-(a[1].cachedAt||0)).slice(0,MAX_CACHED_MATCHES);
@@ -146,7 +192,7 @@ async function teamData(id,label){
   for(let index=0;index<events.length;index++){
     const event=events[index],cacheKey=`${event.id}:${id}`;$('analysisStatus').textContent=`${label}: procesando ${index+1}/${events.length}…`;let compact=cache.matches[cacheKey];
     if(!compact){try{compact=parseCompactMatch(event,await summary(event),id)}catch(_){compact=parseCompactMatch(event,{},id)}cache.matches[cacheKey]=compact;added=true}
-    rows.push({...compact,weight:Math.pow(0.9,index)*(compact.friendly?0.55:1)});
+    rows.push({...compact,rowIndex:index,weight:Math.pow(0.9,index)*(compact.friendly?0.55:1)});
   }
   if(added)saveCache();return rows;
 }
@@ -253,7 +299,7 @@ $('findCombos').onclick=()=>{const eligible=state.markets.filter(m=>m.comboEligi
 function renderTeam(id,data){const card=(label,value,digits=2)=>`<div class="stat"><span class="muted">${label}</span><b>${value==null?'—':Number(value).toFixed(digits)}</b></div>`;$(id).innerHTML=card('Goles a favor',data.gf)+card('Goles en contra',data.ga)+card('xG a favor',data.xg)+card('xGA en contra',data.xgAgainst)+card('Tiros',data.shots)+card('A puerta',data.sot)+card('Córners',data.corners)+card('Amarillas',data.yellow)+card('Posesión %',data.possession)+card('Partidos',data.matches,0)}
 function topScores(model){return [...model.scoreMatrix].sort((a,b)=>b.p-a.p).slice(0,6).map(row=>`<div class="topscore"><span>${state.homeName} ${row.a}-${row.b} ${state.awayName}</span><b>${pct(row.p)}</b></div>`).join('')}
 
-$('analyze').onclick=async()=>{if(!state.fixture)return;try{const teams=competitors(state.fixture);state.homeName=teamName(teams.home);state.awayName=teamName(teams.away);$('analysisStatus').textContent='Buscando historiales…';const[homeRows,awayRows]=await Promise.all([teamData(teamId(teams.home),state.homeName),teamData(teamId(teams.away),state.awayName)]),homeAggregate=aggregate(homeRows),awayAggregate=aggregate(awayRows);state.homeRows=homeRows;state.awayRows=awayRows;state.model=createModel(homeAggregate,awayAggregate);state.markets=createMarkets(state.model,state.homeName,state.awayName);state.selected.clear();$('homeName').textContent=state.homeName;$('awayName').textContent=state.awayName;renderTeam('homeStats',homeAggregate);renderTeam('awayStats',awayAggregate);$('homeCoverage').textContent=`Cobertura: ${homeAggregate.shotsCount}/${homeAggregate.matches} con tiros; ${homeAggregate.cornersCount}/${homeAggregate.matches} con córners; ${homeAggregate.yellowCount}/${homeAggregate.matches} con tarjetas.`;$('awayCoverage').textContent=`Cobertura: ${awayAggregate.shotsCount}/${awayAggregate.matches} con tiros; ${awayAggregate.cornersCount}/${awayAggregate.matches} con córners; ${awayAggregate.yellowCount}/${awayAggregate.matches} con tarjetas.`;$('matches').innerHTML=[...homeRows,...awayRows].map(row=>`<tr data-match="${row.date||''}||${row.team}"><td>${row.date||'—'}</td><td>${row.team}</td><td>${row.opponent}</td><td>${row.gf??'—'}-${row.ga??'—'}</td><td>${row.shots??'—'}</td><td>${row.sot??'—'}</td><td>${row.corners??'—'}</td><td>${row.yellow??'—'}</td><td class="xg-cell">${row.xg!=null?row.xg.toFixed(2):'—'}</td><td class="xga-cell">${row.xgAgainst!=null?row.xgAgainst.toFixed(2):'—'}</td></tr>`).join('');$('confidence').textContent=state.model.confidence;$('confidence').className=state.model.confidence==='Media'?'good':state.model.confidence==='Baja'?'bad':'warn';$('xgTotal').textContent=(state.model.homeGoals+state.model.awayGoals).toFixed(2);$('cardsTotal').textContent=(state.model.homeCards+state.model.awayCards).toFixed(2);$('sampleSize').textContent=`${homeRows.length}+${awayRows.length}`;$('modelWarning').textContent=state.model.useHomeXG&&state.model.useAwayXG?'Modelo usando xG de Sofascore como base del λ. Ajuste por tiros omitido (xG ya incorpora calidad del tiro). Tarjetas y primera parte son aproximaciones.':state.model.useHomeXG||state.model.useAwayXG?'xG disponible para un equipo; modelo mixto. Añade xG al otro para mayor precisión.':'Sin xG: modelo basado en goles reales. Usa "Añadir xG" para mejorar el modelo. Ajuste por tiros solo con cobertura ≥5 partidos.';$('topScores').innerHTML=topScores(state.model);renderMarkets();renderSelectedCombo();$('comboSuggestions').innerHTML='';$('analysisArea').classList.remove('hidden');$('analysisStatus').textContent=`Listo: ${homeRows.length} partidos de ${state.homeName} y ${awayRows.length} de ${state.awayName}.`}catch(error){$('analysisStatus').textContent='No se pudo completar: '+error.message}};
+$('analyze').onclick=async()=>{if(!state.fixture)return;try{const teams=competitors(state.fixture);state.homeName=teamName(teams.home);state.awayName=teamName(teams.away);$('analysisStatus').textContent='Buscando historiales…';const[homeRows,awayRows]=await Promise.all([teamData(teamId(teams.home),state.homeName),teamData(teamId(teams.away),state.awayName)]);$('analysisStatus').textContent='Enriqueciendo pesos con ClubElo…';const[homeEloCount,awayEloCount]=await Promise.all([enrichRowsWithElo(homeRows),enrichRowsWithElo(awayRows)]);const homeAggregate=aggregate(homeRows),awayAggregate=aggregate(awayRows);state.homeRows=homeRows;state.awayRows=awayRows;state.model=createModel(homeAggregate,awayAggregate);state.markets=createMarkets(state.model,state.homeName,state.awayName);state.selected.clear();$('homeName').textContent=state.homeName;$('awayName').textContent=state.awayName;renderTeam('homeStats',homeAggregate);renderTeam('awayStats',awayAggregate);$('homeCoverage').textContent=`Cobertura: ${homeAggregate.shotsCount}/${homeAggregate.matches} con tiros; ${homeAggregate.cornersCount}/${homeAggregate.matches} con córners; ${homeAggregate.yellowCount}/${homeAggregate.matches} con tarjetas.`;$('awayCoverage').textContent=`Cobertura: ${awayAggregate.shotsCount}/${awayAggregate.matches} con tiros; ${awayAggregate.cornersCount}/${awayAggregate.matches} con córners; ${awayAggregate.yellowCount}/${awayAggregate.matches} con tarjetas.`;$('matches').innerHTML=[...homeRows,...awayRows].map(row=>`<tr data-match="${row.date||''}||${row.team}"><td>${row.date||'—'}</td><td>${row.team}</td><td>${row.opponent}</td><td>${row.gf??'—'}-${row.ga??'—'}</td><td>${row.shots??'—'}</td><td>${row.sot??'—'}</td><td>${row.corners??'—'}</td><td>${row.yellow??'—'}</td><td class="xg-cell">${row.xg!=null?row.xg.toFixed(2):'—'}</td><td class="xga-cell">${row.xgAgainst!=null?row.xgAgainst.toFixed(2):'—'}</td><td class="elo-cell">${row.rivalElo!=null?Math.round(row.rivalElo):'—'}</td></tr>`).join('');$('confidence').textContent=state.model.confidence;$('confidence').className=state.model.confidence==='Media'?'good':state.model.confidence==='Baja'?'bad':'warn';$('xgTotal').textContent=(state.model.homeGoals+state.model.awayGoals).toFixed(2);$('cardsTotal').textContent=(state.model.homeCards+state.model.awayCards).toFixed(2);$('sampleSize').textContent=`${homeRows.length}+${awayRows.length}`;$('modelWarning').textContent=state.model.useHomeXG&&state.model.useAwayXG?'Modelo usando xG de Sofascore como base del λ. Ajuste por tiros omitido (xG ya incorpora calidad del tiro). Tarjetas y primera parte son aproximaciones.':state.model.useHomeXG||state.model.useAwayXG?'xG disponible para un equipo; modelo mixto. Añade xG al otro para mayor precisión.':'Sin xG: modelo basado en goles reales. Usa "Añadir xG" para mejorar el modelo. Ajuste por tiros solo con cobertura ≥5 partidos.';$('topScores').innerHTML=topScores(state.model);renderMarkets();renderSelectedCombo();$('comboSuggestions').innerHTML='';$('analysisArea').classList.remove('hidden');const eloTotal=homeEloCount+awayEloCount,eloNote=eloTotal>0?` Elo activo: ${eloTotal}/${homeRows.length+awayRows.length} partidos ponderados.`:' (ClubElo no disponible, pesos sin ajuste de rival.)';$('analysisStatus').textContent=`Listo: ${homeRows.length} partidos de ${state.homeName} y ${awayRows.length} de ${state.awayName}.${eloNote}`}catch(error){$('analysisStatus').textContent='No se pudo completar: '+error.message}};
 
 $('enrichXG').onclick=async()=>{
   if(!state.homeName||!state.awayName){$('xgStatus').textContent='Primero analiza un partido.';return}
