@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-06-27T14:57:27.678250+00:00",
+  "status": "partial_or_failed",
+  "test_fixture": {
+    "home_team": "Croatia",
+    "away_team": "Ghana",
+    "kickoff": "2026-06-27T23:00:00+02:00",
+    "competition": "FIFA World Cup 2026",
+    "group": "L",
+    "status": "scheduled",
+    "note": "El informe de este partido solo existirá después del encuentro."
+  },
+  "teams": {
+    "Croatia": {
+      "status": "blocked_or_error",
+      "matches": [],
+      "error": "FBRef bloqueó la petición (HTTP 403): https://fbref.com/en/search/search.fcgi?search=Croatia+national+team"
+    },
+    "Ghana": {
+      "status": "blocked_or_error",
+      "matches": [],
+      "error": "FBRef bloqueó la petición (HTTP 403): https://fbref.com/en/search/search.fcgi?search=Ghana+national+team"
+    }
+  },
+  "diagnostics": [
+    {
+      "team": "Croatia",
+      "error": "FBRef bloqueó la petición (HTTP 403): https://fbref.com/en/search/search.fcgi?search=Croatia+national+team"
+    },
+    {
+      "team": "Ghana",
+      "error": "FBRef bloqueó la petición (HTTP 403): https://fbref.com/en/search/search.fcgi?search=Ghana+national+team"
+    }
+  ]
+}
