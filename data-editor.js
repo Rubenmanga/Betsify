@@ -1,17 +1,31 @@
 'use strict';
 
 const EDITABLE_FIELDS = [
-  { field: 'gf', label: 'GF' },
-  { field: 'ga', label: 'GC' },
-  { field: 'shots', label: 'Tiros' },
-  { field: 'sot', label: 'A puerta' },
-  { field: 'corners', label: 'Córners' },
-  { field: 'yellow', label: 'TA' }
+  'gf','ga','shots','shotsAgainst','sot','sotAgainst','corners','cornersAgainst','yellow'
 ];
+
+const MIRROR_FIELDS = {
+  gf: 'ga',
+  ga: 'gf',
+  shots: 'shotsAgainst',
+  shotsAgainst: 'shots',
+  sot: 'sotAgainst',
+  sotAgainst: 'sot',
+  corners: 'cornersAgainst',
+  cornersAgainst: 'corners'
+};
 
 function findCachedMatch(date, team, opponent) {
   return Object.entries(cache.matches).find(([, match]) =>
     match.date === date && match.team === team && match.opponent === opponent
+  ) || null;
+}
+
+function findCounterpart(match) {
+  return Object.entries(cache.matches).find(([, candidate]) =>
+    candidate.id === match.id &&
+    candidate.team === match.opponent &&
+    candidate.opponent === match.team
   ) || null;
 }
 
@@ -49,12 +63,24 @@ function ensureEditorToolbar() {
   toolbar.innerHTML = `
     <button id="saveManualData" type="button">Guardar y recalcular</button>
     <button id="resetManualData" type="button" class="secondary">Restablecer manuales</button>
-    <span id="manualDataStatus" class="data-edit-note">Puedes completar los valores vacíos o corregir cualquier cifra.</span>
+    <span id="manualDataStatus" class="data-edit-note">Completa los valores vacíos o corrige cualquier cifra. También puedes añadir las estadísticas recibidas.</span>
   `;
   scroll.parentElement.insertBefore(toolbar, scroll);
-
   document.getElementById('saveManualData').addEventListener('click', saveManualData);
   document.getElementById('resetManualData').addEventListener('click', resetManualData);
+}
+
+function ensureExtraHeaders(table) {
+  const headerRow = table.querySelector('thead tr');
+  if (!headerRow || headerRow.querySelector('[data-editor-header]')) return;
+
+  const headers = ['Tiros riv.', 'A puerta riv.', 'Córners riv.', 'Origen'];
+  headers.forEach((label, index) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    if (index === headers.length - 1) th.dataset.editorHeader = 'true';
+    headerRow.appendChild(th);
+  });
 }
 
 function enhanceDataTable() {
@@ -65,13 +91,7 @@ function enhanceDataTable() {
   const table = tbody?.closest('table');
   if (!tbody || !table || !tbody.children.length) return;
 
-  const headerRow = table.querySelector('thead tr');
-  if (headerRow && !headerRow.querySelector('[data-editor-header]')) {
-    const sourceHeader = document.createElement('th');
-    sourceHeader.textContent = 'Origen';
-    sourceHeader.dataset.editorHeader = 'true';
-    headerRow.appendChild(sourceHeader);
-  }
+  ensureExtraHeaders(table);
 
   [...tbody.rows].forEach(row => {
     if (row.dataset.editable === 'true') return;
@@ -93,6 +113,18 @@ function enhanceDataTable() {
     cells[6].innerHTML = editableNumber(match.corners, 'corners', cacheKey);
     cells[7].innerHTML = editableNumber(match.yellow, 'yellow', cacheKey);
 
+    const shotsAgainstCell = document.createElement('td');
+    shotsAgainstCell.innerHTML = editableNumber(match.shotsAgainst, 'shotsAgainst', cacheKey);
+    row.appendChild(shotsAgainstCell);
+
+    const sotAgainstCell = document.createElement('td');
+    sotAgainstCell.innerHTML = editableNumber(match.sotAgainst, 'sotAgainst', cacheKey);
+    row.appendChild(sotAgainstCell);
+
+    const cornersAgainstCell = document.createElement('td');
+    cornersAgainstCell.innerHTML = editableNumber(match.cornersAgainst, 'cornersAgainst', cacheKey);
+    row.appendChild(cornersAgainstCell);
+
     const sourceCell = document.createElement('td');
     sourceCell.className = match.manualFields && Object.keys(match.manualFields).length
       ? 'manual-source edited'
@@ -106,8 +138,7 @@ function enhanceDataTable() {
 function readEditedRows() {
   const grouped = new Map();
   document.querySelectorAll('#matches tr[data-cache-key]').forEach(row => {
-    const cacheKey = row.dataset.cacheKey;
-    const match = cache.matches[cacheKey];
+    const match = cache.matches[row.dataset.cacheKey];
     if (!match) return;
     if (!grouped.has(match.team)) grouped.set(match.team, []);
     grouped.get(match.team).push(match);
@@ -146,8 +177,8 @@ function refreshModelFromManualData() {
 
   renderTeam('homeStats', homeAggregate);
   renderTeam('awayStats', awayAggregate);
-  document.getElementById('homeCoverage').textContent = `Cobertura: ${homeAggregate.shotsCount}/${homeAggregate.matches} con tiros; ${homeAggregate.cornersCount}/${homeAggregate.matches} con córners; ${homeAggregate.yellowCount}/${homeAggregate.matches} con tarjetas.`;
-  document.getElementById('awayCoverage').textContent = `Cobertura: ${awayAggregate.shotsCount}/${awayAggregate.matches} con tiros; ${awayAggregate.cornersCount}/${awayAggregate.matches} con córners; ${awayAggregate.yellowCount}/${awayAggregate.matches} con tarjetas.`;
+  document.getElementById('homeCoverage').textContent = `Cobertura: ${homeAggregate.shotsCount}/${homeAggregate.matches} con tiros; ${homeAggregate.sotAgainstCount}/${homeAggregate.matches} con tiros a puerta recibidos; ${homeAggregate.cornersCount}/${homeAggregate.matches} con córners; ${homeAggregate.yellowCount}/${homeAggregate.matches} con tarjetas.`;
+  document.getElementById('awayCoverage').textContent = `Cobertura: ${awayAggregate.shotsCount}/${awayAggregate.matches} con tiros; ${awayAggregate.sotAgainstCount}/${awayAggregate.matches} con tiros a puerta recibidos; ${awayAggregate.cornersCount}/${awayAggregate.matches} con córners; ${awayAggregate.yellowCount}/${awayAggregate.matches} con tarjetas.`;
   document.getElementById('confidence').textContent = state.model.confidence;
   document.getElementById('confidence').className = state.model.confidence === 'Media' ? 'good' : state.model.confidence === 'Baja' ? 'bad' : 'warn';
   document.getElementById('xgTotal').textContent = (state.model.homeGoals + state.model.awayGoals).toFixed(2);
@@ -159,24 +190,40 @@ function refreshModelFromManualData() {
   document.getElementById('comboSuggestions').innerHTML = '';
 }
 
+function rememberOriginal(match, field) {
+  match.originalValues ||= {};
+  if (!(field in match.originalValues)) match.originalValues[field] = match[field] ?? null;
+  match.manualFields ||= {};
+  match.manualFields[field] = true;
+}
+
+function applyManualValue(match, field, value) {
+  rememberOriginal(match, field);
+  match[field] = value;
+  match.cachedAt = Date.now();
+
+  const counterpartEntry = findCounterpart(match);
+  const mirroredField = MIRROR_FIELDS[field];
+  if (!counterpartEntry || !mirroredField) return;
+
+  const [, counterpart] = counterpartEntry;
+  rememberOriginal(counterpart, mirroredField);
+  counterpart[mirroredField] = value;
+  counterpart.cachedAt = Date.now();
+}
+
 function saveManualData() {
   let changed = 0;
   document.querySelectorAll('.match-data-input').forEach(input => {
     const cacheKey = input.dataset.cacheKey;
     const field = input.dataset.field;
     const match = cache.matches[cacheKey];
-    if (!match || !EDITABLE_FIELDS.some(item => item.field === field)) return;
+    if (!match || !EDITABLE_FIELDS.includes(field)) return;
 
     const nextValue = input.value.trim() === '' ? null : Math.max(0, Math.round(Number(input.value)));
-    if (Number.isNaN(nextValue)) return;
-    if (match[field] === nextValue) return;
+    if (Number.isNaN(nextValue) || match[field] === nextValue) return;
 
-    match.originalValues ||= {};
-    if (!(field in match.originalValues)) match.originalValues[field] = match[field] ?? null;
-    match.manualFields ||= {};
-    match.manualFields[field] = true;
-    match[field] = nextValue;
-    match.cachedAt = Date.now();
+    applyManualValue(match, field, nextValue);
     changed++;
   });
 
@@ -196,7 +243,7 @@ function saveManualData() {
   });
 
   refreshModelFromManualData();
-  document.getElementById('manualDataStatus').textContent = `${changed} valores guardados. El modelo y los mercados se han recalculado.`;
+  document.getElementById('manualDataStatus').textContent = `${changed} valores guardados. El modelo y todos los mercados se han recalculado.`;
 }
 
 function resetManualData() {
