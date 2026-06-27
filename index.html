@@ -1,76 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#090b0a">
-<title>Betsify — Pronósticos con valor</title>
-<link rel="stylesheet" href="styles.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0e0c"><title>Betsify Free</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0e0c;--card:#141915;--line:#283128;--text:#f4f7f4;--muted:#9baa9d;--accent:#78f58b;--bad:#ff7676}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,Segoe UI,sans-serif}header{position:sticky;top:0;background:#0b0e0cf2;border-bottom:1px solid var(--line);z-index:2}.wrap{max-width:1080px;margin:auto;padding:18px}.brand{font-weight:900;font-size:24px}.brand span{color:var(--accent)}.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:16px 0}h1,h2{margin:0 0 12px}h2{font-size:18px}.muted{color:var(--muted)}label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}input,select,button{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:#0e120f;color:var(--text);font:inherit}button{cursor:pointer;background:var(--accent);color:#071008;font-weight:800;border:0}button.secondary{background:#202820;color:var(--text)}button:disabled{opacity:.5;cursor:not-allowed}.status{padding:12px;border-radius:12px;background:#101510;color:var(--muted);margin-top:12px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:#0f140f;border:1px solid var(--line);padding:12px;border-radius:12px}.stat b{display:block;font-size:21px;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line)}th{color:var(--muted)}.good{color:var(--accent);font-weight:800}.bad{color:var(--bad)}.hidden{display:none}.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#213022;color:var(--accent);font-size:12px}.notice{border-left:3px solid var(--accent);padding-left:12px}@media(max-width:720px){.g2,.g3,.stats{grid-template-columns:1fr 1fr}.wrap{padding:12px}}
+</style>
 </head>
 <body>
-<header><div class="header-inner"><div class="brand">BETSI<span>FY</span></div><nav>
-<button class="tab-btn active" data-tab="analysis">Analizar</button><button class="tab-btn" data-tab="bankroll">Bankroll</button><button class="tab-btn" data-tab="history">Historial</button><button class="tab-btn" data-tab="settings">API</button>
-</nav></div></header>
-<main>
-<section id="panel-analysis" class="panel active">
-  <div class="card">
-    <div class="card-title">Partidos reales</div>
-    <div class="grid grid-3">
-      <div class="form-row"><label>Fecha</label><input type="date" id="fixture-date"></div>
-      <div class="form-row"><label>League ID (opcional)</label><input type="number" id="league-id" placeholder="1 = World Cup" value="1" min="1"></div>
-      <div class="form-row" style="align-self:end"><button class="btn btn-primary btn-full" id="load-fixtures">Cargar partidos</button></div>
-    </div>
-    <div class="form-row"><label>Partido</label><select id="fixture-select" disabled><option value="">— Carga los partidos de una fecha —</option></select></div>
-    <button class="btn btn-primary btn-full" id="analyze-fixture" disabled>Analizar fixture</button>
-    <div id="api-message" class="status" style="margin-top:10px">Añade tu API key en la pestaña API. La clave se guarda únicamente en este navegador.</div>
-  </div>
-
-  <div id="analysis-output" class="hidden">
-    <div class="card" id="fixture-card"></div>
-    <div class="grid grid-2" id="team-cards"></div>
-    <div class="card">
-      <div class="card-title">Probabilidad final Betsify</div>
-      <div class="prob-labels"><span class="green" id="prob-home-name">Local</span><span class="yellow">Empate</span><span class="blue" id="prob-away-name">Visitante</span></div>
-      <div class="prob-bar"><span class="p-home" id="bar-home"></span><span class="p-draw" id="bar-draw"></span><span class="p-away" id="bar-away"></span></div>
-      <div class="prob-values"><span class="green" id="prob-home"></span><span class="yellow" id="prob-draw"></span><span class="blue" id="prob-away"></span></div>
-      <div class="note" id="lambda-line" style="margin-top:10px"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Comparación de modelos</div>
-      <div class="comparison" id="model-comparison"></div>
-      <div class="note" id="api-advice" style="margin-top:10px"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Cuotas y valor esperado</div>
-      <div id="odds-source" class="note" style="margin-bottom:10px">Introduce cuotas manualmente o usa las cargadas por API-Football.</div>
-      <div id="markets"></div>
-      <button class="btn btn-primary btn-full" id="calculate-ev">Calcular EV</button>
-    </div>
-    <div id="ev-card" class="card hidden"><div class="card-title">Mercados ordenados por EV</div><div id="ev-list"></div></div>
-  </div>
-</section>
-
-<section id="panel-bankroll" class="panel">
-  <div class="grid grid-2">
-    <div class="card"><div class="card-title">Bankroll</div><div class="form-row"><label>Saldo (€)</label><input type="number" id="bankroll-input" min="0" step="10"></div><button class="btn btn-primary btn-full" id="save-bankroll">Guardar</button><div class="stat" style="margin-top:12px"><strong class="green" id="bankroll-value">€0</strong><small>Bankroll actual</small></div></div>
-    <div class="card"><div class="card-title">Medio Kelly limitado</div><div class="grid grid-2"><div class="form-row"><label>Probabilidad (%)</label><input type="number" id="kelly-prob" min="1" max="99" step=".1"></div><div class="form-row"><label>Cuota</label><input type="number" id="kelly-odds" min="1.01" step=".01"></div></div><button class="btn btn-primary btn-full" id="calc-kelly">Calcular</button><div id="kelly-result" class="status" style="margin-top:10px">Límite máximo aplicado: 5% del bankroll.</div></div>
-  </div>
-  <div class="card"><div class="card-title">Rendimiento liquidado</div><div class="stat-grid"><div class="stat"><strong id="sum-invested">€0</strong><small>Invertido</small></div><div class="stat"><strong id="sum-profit">€0</strong><small>Beneficio</small></div><div class="stat"><strong id="sum-roi">0%</strong><small>ROI</small></div></div></div>
-</section>
-
-<section id="panel-history" class="panel">
-  <div class="card"><div class="card-title">Registrar apuesta</div><div class="grid grid-2"><div class="form-row"><label>Partido</label><input type="text" id="bet-match"></div><div class="form-row"><label>Mercado</label><input type="text" id="bet-market"></div><div class="form-row"><label>Cuota</label><input type="number" id="bet-odds" min="1.01" step=".01"></div><div class="form-row"><label>Stake (€)</label><input type="number" id="bet-stake" min=".01" step=".5"></div></div><button class="btn btn-primary btn-full" id="add-bet">Añadir</button></div>
-  <div id="bets-list"></div>
-</section>
-
-<section id="panel-settings" class="panel">
-  <div class="card"><div class="card-title">API-Football</div><div class="form-row"><label>API key</label><input type="password" id="api-key" autocomplete="off" placeholder="x-apisports-key"></div><button class="btn btn-primary btn-full" id="save-key">Guardar clave</button><button class="btn btn-secondary btn-full" id="test-key" style="margin-top:8px">Probar conexión</button><div id="key-status" class="status" style="margin-top:10px"></div>
-  <div class="notice">Modo prototipo: la clave se guarda en <strong>localStorage</strong> y se envía directamente a API-Football. No publiques una clave compartida. Para una versión pública, usa una función serverless como proxy.</div></div>
-  <div class="card"><div class="card-title">Uso y caché</div><div class="stat-grid"><div class="stat"><strong id="quota-daily">—</strong><small>Restantes/día</small></div><div class="stat"><strong id="quota-minute">—</strong><small>Restantes/min</small></div><div class="stat"><strong id="cache-count">0</strong><small>Entradas caché</small></div></div><button class="btn btn-danger btn-full" id="clear-cache" style="margin-top:12px">Limpiar caché API</button></div>
-  <div class="card"><div class="card-title">Qué usa el modelo</div><p class="note">Betsify calcula goles esperados del modelo a partir de medias ofensivas y defensivas de la temporada, ventaja local y regresión a la media. Después combina el modelo Poisson propio con la predicción 1X2 de API-Football cuando está disponible. Las cuotas se usan para detectar valor, no para alterar la probabilidad deportiva.</p></div>
-</section>
-</main>
-<div id="toast"></div>
-<script src="app.js"></script>
-</body>
-</html>
+<header><div class="wrap"><div class="brand">BETSI<span>FY</span> <small class="pill">FREE MVP</small></div></div></header>
+<main class="wrap">
+<section class="card"><h1>Analizador de valor del Mundial</h1><p class="muted notice">Sin API de pago: historial gratuito, estadísticas disponibles, modelo Poisson y cuotas introducidas manualmente.</p><div class="grid g3"><div><label>Fecha</label><input id="date" type="date"></div><div><label>Partido</label><select id="fixture"><option>Carga los partidos</option></select></div><div style="align-self:end"><button id="load">Cargar partidos</button></div></div><div id="fixtureStatus" class="status">Selecciona una fecha.</div></section>
+<section class="card"><h2>1. Crear análisis</h2><button id="analyze" disabled>Analizar forma reciente</button><div id="analysisStatus" class="status">Primero selecciona un partido.</div></section>
+<section id="teamResults" class="hidden"><div class="grid g2"><div class="card"><h2 id="homeName">Local</h2><div id="homeStats" class="stats"></div><p id="homeCoverage" class="muted"></p></div><div class="card"><h2 id="awayName">Visitante</h2><div id="awayStats" class="stats"></div><p id="awayCoverage" class="muted"></p></div></div><div class="card"><h2>Partidos utilizados</h2><div style="overflow:auto"><table><thead><tr><th>Fecha</th><th>Selección</th><th>Rival</th><th>Marcador</th><th>Tiros</th><th>A puerta</th><th>Córners</th><th>TA</th></tr></thead><tbody id="matches"></tbody></table></div></div></section>
+<section id="oddsCard" class="card hidden"><h2>2. Introduce las cuotas</h2><div class="grid g3"><div><label id="labelHome">Victoria local</label><input id="oddHome" type="number" step=".01" min="1.01"></div><div><label>Empate</label><input id="oddDraw" type="number" step=".01" min="1.01"></div><div><label id="labelAway">Victoria visitante</label><input id="oddAway" type="number" step=".01" min="1.01"></div></div><div class="grid g2" style="margin-top:12px"><div><label>Over 2.5</label><input id="oddOver" type="number" step=".01" min="1.01"></div><div><label>Ambos marcan — Sí</label><input id="oddBtts" type="number" step=".01" min="1.01"></div></div><button id="compare" style="margin-top:14px">Comparar con el modelo</button></section>
+<section id="modelCard" class="card hidden"><h2>Resultado matemático</h2><div id="modelStats" class="stats"></div><div style="overflow:auto;margin-top:14px"><table><thead><tr><th>Mercado</th><th>Probabilidad</th><th>Cuota justa</th><th>Cuota casa</th><th>EV</th></tr></thead><tbody id="markets"></tbody></table></div><p class="muted">Estimación experimental. Los datos incompletos y las muestras pequeñas reducen la fiabilidad.</p></section>
+<section class="card"><h2>Datos y caché</h2><p class="muted">Los partidos descargados se guardan en tu navegador. Así no repetimos consultas y la base crece durante el Mundial.</p><button id="clear" class="secondary">Borrar datos guardados</button></section>
+</main><script src="app.js"></script>
+</body></html>
