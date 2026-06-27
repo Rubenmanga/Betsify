@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   if (!team) return res.status(400).json({ error: 'team required' });
 
   try {
-    const resp = await fetch(`https://api.clubelo.com/${encodeURIComponent(team)}`, {
+    const resp = await fetch(`http://api.clubelo.com/${encodeURIComponent(team)}`, {
       signal: AbortSignal.timeout(8000),
       headers: { Accept: 'text/plain,text/csv' }
     });
