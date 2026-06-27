@@ -1,0 +1,58 @@
+name: FBRef Croatia Ghana trial
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scraper/fbref_croatia_ghana.py"
+      - "scraper/requirements.txt"
+      - ".github/workflows/fbref-croatia-ghana.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scraper/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scraper/requirements.txt
+
+      - name: Run controlled FBRef trial
+        run: python scraper/fbref_croatia_ghana.py --limit 10 --delay-min 5 --delay-max 8
+
+      - name: Upload diagnostic result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: croatia-ghana-fbref-test
+          path: data/croatia_ghana_test.json
+          if-no-files-found: warn
+
+      - name: Commit generated dataset or diagnostic
+        if: always()
+        run: |
+          if [ ! -f data/croatia_ghana_test.json ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/croatia_ghana_test.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "data: store Croatia Ghana FBRef trial result"
+          git push
