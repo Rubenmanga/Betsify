@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>EDGE2026 — Análisis Matemático WC2026</title>
+<style>
+:root{
+  --bg:#0a0a0a;--card:#141414;--card2:#1a1a1a;--border:#222;
+  --green:#00E87A;--red:#ff4444;--yellow:#FFCC00;--blue:#4daaff;
+  --text:#f0f0eb;--muted:#888;
+  --topbar:52px;--r:8px;
+  --mono:'Courier New',Courier,monospace;
+  --serif:Georgia,'Times New Roman',serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100dvh;padding-top:var(--topbar);padding-bottom:32px}
+a{color:var(--blue)}
+button{cursor:pointer;font-family:var(--mono)}
+input,select,textarea{
+  font-family:var(--mono);font-size:14px;
+  background:#0f0f0f;color:var(--text);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:8px 10px;width:100%;outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--green)}
+select option{background:#0f0f0f}
+input[type=checkbox]{width:auto;min-height:auto;accent-color:var(--green)}
+
+/* TOPBAR */
+#topbar{
+  position:fixed;top:0;left:0;right:0;height:var(--topbar);
+  background:#0f0f0f;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:4px;padding:0 10px;z-index:100;
+}
+#logo{font-family:var(--serif);font-size:15px;font-weight:bold;color:var(--green);letter-spacing:2px;flex-shrink:0;margin-right:4px}
+#tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+.tab-btn{
+  background:none;border:1px solid transparent;border-radius:var(--r);
+  color:var(--muted);font-size:11px;padding:5px 10px;min-height:34px;
+  white-space:nowrap;transition:color .15s,border-color .15s;
+}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--green);border-color:var(--green)}
+#btn-cfg{
+  background:none;border:1px solid var(--border);border-radius:var(--r);
+  color:var(--muted);font-size:17px;width:36px;height:36px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+#btn-cfg:hover{color:var(--text);border-color:var(--text)}
+
+/* LAYOUT */
+main{max-width:900px;margin:0 auto;padding:16px 12px}
+.pane{display:none}
+.pane.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.section-title{font-family:var(--serif);font-size:18px;font-weight:bold;margin-bottom:14px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+
+/* TEAM CARDS */
+.team-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.tc-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.tc-flag{font-size:22px}
+.tc-name{font-family:var(--serif);font-size:14px;font-weight:bold}
+.tc-meta{font-size:10px;color:var(--muted)}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.stat-item{text-align:center;background:var(--card2);border-radius:6px;padding:6px 4px}
+.stat-val{font-family:var(--serif);font-size:16px;font-weight:bold;color:var(--green);display:block}
+.stat-lbl{font-size:9px;color:var(--muted)}
+.match-row{font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid #1e1e1e;display:flex;justify-content:space-between;gap:4px}
+.match-row:last-child{border:none}
+.rW{color:var(--green);font-weight:bold}
+.rD{color:var(--yellow);font-weight:bold}
+.rL{color:var(--red);font-weight:bold}
+
+/* PROB BAR */
+.prob-bar-wrap{margin:8px 0}
+.prob-bar-labs{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px}
+.prob-bar{display:flex;height:26px;border-radius:var(--r);overflow:hidden}
+.pb-l{background:var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;min-width:30px}
+.pb-d{background:var(--yellow);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;min-width:30px}
+.pb-v{background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;min-width:30px}
+
+/* MARKETS */
+.mkt-section{margin-bottom:6px}
+.mkt-header{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.mkt-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #1a1a1a}
+.mkt-row:last-child{border:none}
+.mkt-lbl{font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mkt-prob{font-family:var(--serif);font-size:13px;font-weight:bold;color:var(--blue);width:50px;text-align:right;flex-shrink:0}
+.mkt-odds-in{width:72px;flex-shrink:0;padding:5px 6px;font-size:12px;min-height:32px}
+.mkt-ev-cell{width:68px;flex-shrink:0}
+.ah-sel{width:60px;flex-shrink:0;padding:5px 4px;font-size:11px;min-height:32px}
+
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;justify-content:center;border-radius:4px;padding:3px 6px;font-size:11px;font-weight:bold;width:68px;text-align:center}
+.chip-g{background:rgba(0,232,122,.15);color:var(--green);border:1px solid rgba(0,232,122,.3)}
+.chip-y{background:rgba(255,204,0,.12);color:var(--yellow);border:1px solid rgba(255,204,0,.3)}
+.chip-r{background:rgba(255,68,68,.12);color:var(--red);border:1px solid rgba(255,68,68,.3)}
+.chip-n{background:#1e1e1e;color:var(--muted);border:1px solid var(--border)}
+
+/* FORM LABELS */
+.flbl{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+
+/* KELLY */
+.kl-box{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center;margin-top:10px}
+.kl-stake{font-family:var(--serif);font-size:30px;font-weight:bold;color:var(--green)}
+.kl-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.formula{background:#0f0f0f;border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:12px;line-height:2;color:#bbb;margin-top:8px}
+.formula code{color:var(--green)}
+
+/* HISTORY */
+.sum-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.sum-stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center}
+.sum-val{font-family:var(--serif);font-size:20px;font-weight:bold;display:block}
+.sum-lbl{font-size:10px;color:var(--muted)}
+.bet-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:11px;margin-bottom:8px}
+.bet-desc{font-size:13px;margin-bottom:4px}
+.bet-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.bet-acts{display:flex;gap:6px;flex-wrap:wrap}
+.btn-sm{border:1px solid var(--border);border-radius:4px;background:none;color:var(--text);font-size:11px;padding:4px 12px;min-height:30px}
+.btn-win{border-color:var(--green);color:var(--green)}
+.btn-win.on{background:rgba(0,232,122,.2)}
+.btn-loss{border-color:var(--red);color:var(--red)}
+.btn-loss.on{background:rgba(255,68,68,.2)}
+.btn-del{color:var(--muted)}
+
+/* ACCORDION */
+details{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+summary{padding:14px;cursor:pointer;font-size:13px;font-weight:bold;list-style:none;display:flex;justify-content:space-between;align-items:center;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'+';color:var(--green);font-size:18px}
+details[open] summary::after{content:'−'}
+.dc{padding:0 14px 14px;font-size:13px;line-height:1.7;color:#ccc}
+.dc p{margin-bottom:10px}
+.dc strong{color:var(--text)}
+.dc code{background:#1a1a1a;padding:1px 5px;border-radius:3px;color:var(--green)}
+.dc ul{padding-left:18px}
+.dc li{margin-bottom:4px}
+.ex{background:#0f0f0f;border:1px solid var(--border);border-radius:4px;padding:10px;margin:8px 0;font-size:12px;color:var(--yellow)}
+
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;width:100%;max-width:440px;max-height:90dvh;overflow-y:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-title{font-family:var(--serif);font-size:16px}
+.btn-close{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;padding:2px 8px}
+.btn-close:hover{color:var(--text)}
+.mfield{margin-bottom:14px}
+.mfield label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px}
+.btn-prim{background:var(--green);color:#000;border:none;border-radius:var(--r);padding:10px;font-family:var(--mono);font-size:13px;font-weight:bold;min-height:44px;width:100%;margin-bottom:8px}
+.btn-sec{background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--text);padding:10px;font-family:var(--mono);font-size:13px;min-height:44px;width:100%;margin-bottom:8px}
+.api-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:99px;margin-left:8px}
+.api-ok{background:rgba(0,232,122,.15);color:var(--green)}
+.api-err{background:rgba(255,68,68,.12);color:var(--red)}
+
+/* UTILS */
+.hidden{display:none!important}
+.mt8{margin-top:8px}
+.mt12{margin-top:12px}
+.tc{text-align:center}
+.muted{color:var(--muted);font-size:11px}
+#house-mg{text-align:center;font-size:11px;color:var(--muted);padding:4px}
+#house-mg span{color:var(--yellow);font-weight:bold}
+#analysis-txt{font-size:13px;line-height:1.65;color:#ccc}
+#analysis-txt strong{color:var(--green)}
+#xg-sum{text-align:center;font-size:11px;color:var(--muted);margin-top:6px}
+
+/* RESPONSIVE */
+@media(min-width:600px){
+  html{font-size:15px}
+  .sum-grid{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:420px){
+  .mkt-ev-cell,.mkt-odds-in{width:56px}
+  .chip{width:56px;font-size:10px}
+  .mkt-lbl{font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header id="topbar">
+  <div id="logo">EDGE2026</div>
+  <nav id="tabs">
+    <button class="tab-btn active" data-p="analizar">Analizar</button>
+    <button class="tab-btn" data-p="bankroll">Kelly</button>
+    <button class="tab-btn" data-p="historial">Historial</button>
+    <button class="tab-btn" data-p="guia">Guía</button>
+  </nav>
+  <button id="btn-cfg" title="Configuración">⚙</button>
+</header>
+
+<!-- CONFIG MODAL -->
+<div id="modal-cfg" class="modal" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title">⚙ Configuración</span>
+      <button class="btn-close" id="close-cfg">✕</button>
+    </div>
+    <div class="mfield">
+      <label>API Key WC2026 <span id="api-badge" class="api-badge api-err">● Sin clave</span></label>
+      <input type="password" id="cfg-key" placeholder="Tu API key…" autocomplete="off">
+      <div class="muted mt8">Consigue tu clave gratuita en <a href="https://www.wc2026api.com" target="_blank" rel="noopener">wc2026api.com ↗</a></div>
+    </div>
+    <div class="mfield">
+      <label>Bankroll total (€)</label>
+      <input type="number" id="cfg-bk" placeholder="1000" min="0" step="10">
+    </div>
+    <button class="btn-prim" id="cfg-save">Guardar configuración</button>
+    <button class="btn-sec" id="cfg-cache">🗑 Borrar caché</button>
+    <button class="btn-sec" id="cfg-csv">📥 Exportar historial CSV</button>
+  </div>
+</div>
+
+<main>
+
+<!-- ====== PANE: ANALIZAR ====== -->
+<section class="pane active" id="pane-analizar">
+  <div class="section-title">⚽ Analizar Partido</div>
+
+  <div class="g2" style="margin-bottom:10px">
+    <div><label class="flbl">Equipo Local</label><select id="sel-l"><option value="">— Seleccionar —</option></select></div>
+    <div><label class="flbl">Equipo Visitante</label><select id="sel-v"><option value="">— Seleccionar —</option></select></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Ajustes del partido</div>
+    <div class="g3" style="margin-bottom:8px">
+      <div><label class="flbl">Fase</label>
+        <select id="adj-ph">
+          <option value="grupos">Grupos</option><option value="r32">R32</option>
+          <option value="octavos">Octavos</option><option value="cuartos">Cuartos</option>
+          <option value="semi">Semifinal</option><option value="final">Final</option>
+        </select>
+      </div>
+      <div><label class="flbl">Motivación Local</label>
+        <select id="adj-ml"><option value="alta">Alta ×1.08</option><option value="media" selected>Media ×1.00</option><option value="baja">Baja ×0.88</option></select>
+      </div>
+      <div><label class="flbl">Motivación Visitante</label>
+        <select id="adj-mv"><option value="alta">Alta ×1.08</option><option value="media" selected>Media ×1.00</option><option value="baja">Baja ×0.88</option></select>
+      </div>
+    </div>
+    <div class="g2" style="margin-bottom:8px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="inj-l"> Baja clave Local ×0.85</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="inj-v"> Baja clave Visitante ×0.85</label>
+    </div>
+    <div class="g2">
+      <div><label class="flbl">H2H</label><input type="text" id="adj-h2h" placeholder="ej. 3-1-1 local"></div>
+      <div><label class="flbl">Notas</label><input type="text" id="adj-notes" placeholder="observaciones…"></div>
+    </div>
+  </div>
+
+  <!-- Stats cards -->
+  <div id="stats-sec" class="g2 hidden" style="margin-bottom:10px">
+    <div id="card-l" class="team-card"></div>
+    <div id="card-v" class="team-card"></div>
+  </div>
+
+  <!-- Prob bars -->
+  <div id="prob-sec" class="card hidden">
+    <div class="card-title">Probabilidades del modelo</div>
+    <div id="prob-bars"></div>
+    <div id="xg-sum"></div>
+  </div>
+
+  <!-- Markets -->
+  <div id="mkt-sec" class="hidden">
+    <div class="card">
+      <div class="card-title">Cuotas y Valor Esperado</div>
+
+      <div class="mkt-section">
+        <div class="mkt-header">1X2</div>
+        <div class="mkt-row"><span class="mkt-lbl">1 Local gana</span><span class="mkt-prob" id="p1">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="o1" placeholder="cuota"><div class="mkt-ev-cell" id="ev1"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">X Empate</span><span class="mkt-prob" id="pX">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="oX" placeholder="cuota"><div class="mkt-ev-cell" id="evX"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">2 Visitante gana</span><span class="mkt-prob" id="p2">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="o2" placeholder="cuota"><div class="mkt-ev-cell" id="ev2"><span class="chip chip-n">—</span></div></div>
+        <div id="house-mg" class="hidden"></div>
+      </div>
+
+      <div class="mkt-section">
+        <div class="mkt-header">Goles totales</div>
+        <div class="mkt-row"><span class="mkt-lbl">Más de 2.5</span><span class="mkt-prob" id="po25">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="oo25" placeholder="cuota"><div class="mkt-ev-cell" id="evo25"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Menos de 2.5</span><span class="mkt-prob" id="pu25">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="ou25" placeholder="cuota"><div class="mkt-ev-cell" id="evu25"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Ambos marcan Sí</span><span class="mkt-prob" id="pbttsy">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="obttsy" placeholder="cuota"><div class="mkt-ev-cell" id="evbttsy"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Ambos marcan No</span><span class="mkt-prob" id="pbttnn">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="obttsn" placeholder="cuota"><div class="mkt-ev-cell" id="evbttsn"><span class="chip chip-n">—</span></div></div>
+      </div>
+
+      <div class="mkt-section">
+        <div class="mkt-header">Hándicap Asiático (Local)</div>
+        <div class="mkt-row">
+          <span class="mkt-lbl">AH Local</span>
+          <span class="mkt-prob" id="pah">—</span>
+          <select id="ah-line" class="ah-sel">
+            <option value="-1.5">-1.5</option><option value="-1">-1</option>
+            <option value="-0.75">-¾</option><option value="-0.5">-½</option>
+            <option value="-0.25">-¼</option><option value="0" selected>0</option>
+            <option value="0.25">+¼</option><option value="0.5">+½</option>
+            <option value="0.75">+¾</option><option value="1">+1</option>
+            <option value="1.5">+1.5</option>
+          </select>
+          <input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="oah" placeholder="cuota">
+          <div class="mkt-ev-cell" id="evah"><span class="chip chip-n">—</span></div>
+        </div>
+      </div>
+
+      <div class="mkt-section">
+        <div class="mkt-header">Córneres</div>
+        <div class="mkt-row"><span class="mkt-lbl">Más de 9.5</span><span class="mkt-prob" id="pc95">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="oc95" placeholder="cuota"><div class="mkt-ev-cell" id="evc95"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Más de 10.5</span><span class="mkt-prob" id="pc105">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="oc105" placeholder="cuota"><div class="mkt-ev-cell" id="evc105"><span class="chip chip-n">—</span></div></div>
+      </div>
+
+      <div class="mkt-section">
+        <div class="mkt-header">Tarjetas amarillas</div>
+        <div class="mkt-row"><span class="mkt-lbl">Más de 3.5</span><span class="mkt-prob" id="pk35">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="ok35" placeholder="cuota"><div class="mkt-ev-cell" id="evk35"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Más de 4.5</span><span class="mkt-prob" id="pk45">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="ok45" placeholder="cuota"><div class="mkt-ev-cell" id="evk45"><span class="chip chip-n">—</span></div></div>
+      </div>
+
+      <div class="mkt-section">
+        <div class="mkt-header">Primera mitad</div>
+        <div class="mkt-row"><span class="mkt-lbl">Gol 1ª mitad Sí</span><span class="mkt-prob" id="pg1hy">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="og1hy" placeholder="cuota"><div class="mkt-ev-cell" id="evg1hy"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Gol 1ª mitad No</span><span class="mkt-prob" id="pg1hn">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="og1hn" placeholder="cuota"><div class="mkt-ev-cell" id="evg1hn"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Más 0.5 goles 1H</span><span class="mkt-prob" id="po051h">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="oo051h" placeholder="cuota"><div class="mkt-ev-cell" id="evo051h"><span class="chip chip-n">—</span></div></div>
+        <div class="mkt-row"><span class="mkt-lbl">Más 0.5 goles 2H</span><span class="mkt-prob" id="po052h">—</span><input class="mkt-odds-in" type="number" step="0.01" min="1.01" id="oo052h" placeholder="cuota"><div class="mkt-ev-cell" id="evo052h"><span class="chip chip-n">—</span></div></div>
+      </div>
+    </div>
+
+    <div class="card" id="analysis-txt"></div>
+  </div>
+</section>
+
+<!-- ====== PANE: BANKROLL & KELLY ====== -->
+<section class="pane" id="pane-bankroll">
+  <div class="section-title">💰 Bankroll &amp; Kelly</div>
+  <div class="card">
+    <div class="card-title">Calculadora Half-Kelly</div>
+    <div class="g3">
+      <div><label class="flbl">Probabilidad estimada (%)</label><input type="number" id="kl-p" placeholder="55" min="1" max="99" step="0.1"></div>
+      <div><label class="flbl">Cuota decimal</label><input type="number" id="kl-o" placeholder="2.10" min="1.01" step="0.01"></div>
+      <div><label class="flbl">Bankroll (€)</label><input type="number" id="kl-b" placeholder="1000" min="0" step="10"></div>
+    </div>
+    <div id="kl-res"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Fórmulas</div>
+    <div class="formula">
+      <div><code>EV = p × cuota − 1</code></div>
+      <div><code>Prob. implícita = 1 / cuota</code></div>
+      <div><code>Margen casa = Σ(1/cuota) − 1</code></div>
+      <div><code>Kelly% = (p × b − q) / b</code> &nbsp;[b=cuota−1, q=1−p]</div>
+      <div><code>Half-Kelly = Kelly% / 2</code></div>
+      <div><code>Stake = Half-Kelly × Bankroll</code></div>
+    </div>
+    <div class="dc mt8">
+      <p><strong>¿Por qué Half-Kelly?</strong> El Kelly completo maximiza el crecimiento logarítmico pero es agresivo. Dividir entre 2 reduce la volatilidad preservando buena parte del crecimiento. Si el EV es negativo, Kelly devuelve un valor negativo — no apostar.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Resumen actividad</div>
+    <div id="kl-summary"></div>
+  </div>
+</section>
+
+<!-- ====== PANE: HISTORIAL ====== -->
+<section class="pane" id="pane-historial">
+  <div class="section-title">📊 Historial de Apuestas</div>
+  <div id="hist-stats" class="sum-grid"></div>
+  <div class="card">
+    <div class="card-title">Nueva apuesta</div>
+    <div class="g2" style="margin-bottom:8px">
+      <div><label class="flbl">Descripción</label><input type="text" id="bet-desc" placeholder="España vs Francia — 1X2"></div>
+      <div><label class="flbl">Mercado</label><input type="text" id="bet-mkt" placeholder="1X2, BTTS…"></div>
+    </div>
+    <div class="g2">
+      <div><label class="flbl">Cuota</label><input type="number" id="bet-odds" placeholder="2.10" min="1.01" step="0.01"></div>
+      <div><label class="flbl">Stake (€)</label><input type="number" id="bet-stake" placeholder="20" min="0.01" step="0.01"></div>
+    </div>
+    <button class="btn-prim mt8" id="btn-add" style="max-width:200px">+ Añadir</button>
+  </div>
+  <div id="bet-list"></div>
+</section>
+
+<!-- ====== PANE: GUÍA ====== -->
+<section class="pane" id="pane-guia">
+  <div class="section-title">📚 Guía</div>
+
+  <details open>
+    <summary>1. Valor Esperado (EV)</summary>
+    <div class="dc">
+      <p>El <strong>Valor Esperado</strong> mide si una apuesta es rentable a largo plazo. EV positivo = ganancia esperada; EV negativo = pérdida esperada.</p>
+      <div class="ex">
+        Ejemplo: prob. real = 55%, cuota = 2.10<br>
+        EV = 0.55 × 2.10 − 1 = 1.155 − 1 = <strong>+0.155 (+15.5%)</strong><br>
+        Por cada €100 apostados, retorno esperado €115.50
+      </div>
+      <p>La casa añade margen bajando las cuotas, por lo que la mayoría de apuestas tienen EV negativo. <strong>Solo apuesta cuando el modelo detecte valor positivo</strong>, con disciplina de bankroll.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>2. xG y Distribución de Poisson</summary>
+    <div class="dc">
+      <p>El <strong>xG (goles esperados)</strong> cuantifica la calidad de las ocasiones. Un xG de 2.0 significa que el equipo «merecería» ~2 goles con sus tiros, independientemente del resultado real.</p>
+      <p>Dado un xG λ, Poisson calcula la probabilidad de marcar exactamente k goles:</p>
+      <div class="ex">
+        P(k | λ=1.8) = e⁻¹·⁸ × 1.8ᵏ / k!<br>
+        P(0)≈16.5% &nbsp;|&nbsp; P(1)≈29.7% &nbsp;|&nbsp; P(2)≈26.7% &nbsp;|&nbsp; P(3)≈16.0%
+      </div>
+      <p>EDGE2026 construye una matriz 10×10 con todos los marcadores posibles y calcula la probabilidad conjunta de cada resultado. La mezcla <strong>xG_local = xGf_local×0.65 + xGa_visitante×0.35</strong> pondera el ataque propio (65%) y la defensa rival (35%).</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>3. Cómo elegir mercado</summary>
+    <div class="dc">
+      <ul>
+        <li><strong>1X2</strong>: Cuando la diferencia de xG es clara (≥0.5) y hay suficiente muestra.</li>
+        <li><strong>Goles totales</strong>: Over si ambos xG ≥ 1.5; Under si ambos ≤ 1.0.</li>
+        <li><strong>BTTS</strong>: Cuando ambos equipos tienen xGf ≥ 1.0 consistentemente.</li>
+        <li><strong>Hándicap asiático</strong>: Reduce margen de casa en favoritos claros; -0.5 es el más limpio.</li>
+        <li><strong>Córneres</strong>: Equipos de alta posesión generan más. Usa datos reales de API para mejor precisión.</li>
+        <li><strong>Tarjetas</strong>: +10% en fases eliminatorias. Partidos de alta intensidad o con rivalidad.</li>
+        <li><strong>Mercados 1ª mitad</strong>: Más volátiles. Útil si un equipo tiene historial de salida fuerte.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details>
+    <summary>4. Gestión de Bankroll y Kelly</summary>
+    <div class="dc">
+      <p>El <strong>Criterio de Kelly</strong> determina el % óptimo del bankroll a apostar para maximizar el crecimiento a largo plazo.</p>
+      <div class="ex">
+        p=55%, cuota=2.10, b=1.10, q=45%<br>
+        Kelly = (0.55×1.10 − 0.45) / 1.10 = 0.155/1.10 ≈ <strong>14.1%</strong><br>
+        Half-Kelly = <strong>7.05%</strong> del bankroll
+      </div>
+      <ul>
+        <li>Nunca superes el 5% por apuesta aunque Kelly lo permita.</li>
+        <li>EV negativo → Kelly negativo → no apostar.</li>
+        <li>Recalcula el bankroll tras cada resultado (es una estrategia dinámica).</li>
+        <li>Half-Kelly compensa la incertidumbre en tus estimaciones de probabilidad.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details>
+    <summary>5. Fuentes de datos recomendadas</summary>
+    <div class="dc">
+      <ul>
+        <li><a href="https://www.sofascore.com" target="_blank" rel="noopener">Sofascore</a> — xG en vivo y estadísticas por partido</li>
+        <li><a href="https://fbref.com" target="_blank" rel="noopener">FBref</a> — base de datos histórica profunda (xG, presión, etc.)</li>
+        <li><a href="https://xgscore.io" target="_blank" rel="noopener">xGScore</a> — xG específico por partido</li>
+        <li><a href="https://www.oddsportal.com" target="_blank" rel="noopener">Oddsportal</a> — comparador de cuotas históricas</li>
+        <li><a href="https://www.betexplorer.com" target="_blank" rel="noopener">Betexplorer</a> — resultados y cuotas apertura/cierre</li>
+        <li><a href="https://www.wc2026api.com" target="_blank" rel="noopener">WC2026 API</a> — datos en tiempo real del torneo</li>
+      </ul>
+      <p class="mt8" style="color:var(--muted)">⚠ Los modelos matemáticos son orientativos. Las apuestas deportivas conllevan riesgo. Apuesta solo lo que puedas permitirte perder.</p>
+    </div>
+  </details>
+</section>
+
+</main>
+
+<script>
+'use strict';
+
+/* =================================================
+   FALLBACK DATA
+   ================================================= */
+const FB = {
+  "España":{f:"🇪🇸",g:"H",m:[{r:"Cape Verde",xf:2.29,xa:0.30,gf:0,ga:0,res:"D"},{r:"Arabia Saudí",xf:2.30,xa:0.15,gf:4,ga:1,res:"W"}]},
+  "Francia":{f:"🇫🇷",g:"I",m:[{r:"Senegal",xf:1.79,xa:0.56,gf:3,ga:1,res:"W"},{r:"Irak",xf:2.38,xa:0.60,gf:3,ga:0,res:"W"}]},
+  "Alemania":{f:"🇩🇪",g:"E",m:[{r:"Curazao",xf:4.22,xa:0.41,gf:7,ga:1,res:"W"},{r:"Costa de Marfil",xf:1.89,xa:1.22,gf:2,ga:1,res:"W"}]},
+  "Argentina":{f:"🇦🇷",g:"J",m:[{r:"Argelia",xf:1.23,xa:0.31,gf:3,ga:1,res:"W"},{r:"Austria",xf:2.62,xa:0.50,gf:2,ga:0,res:"W"}]},
+  "Brasil":{f:"🇧🇷",g:"C",m:[{r:"Marruecos",xf:1.23,xa:1.53,gf:1,ga:1,res:"D"},{r:"Haití",xf:1.56,xa:0.23,gf:3,ga:0,res:"W"}]},
+  "Portugal":{f:"🇵🇹",g:"K",m:[{r:"RD Congo",xf:0.64,xa:0.82,gf:1,ga:1,res:"D"}]},
+  "Inglaterra":{f:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",g:"L",m:[{r:"Croacia",xf:2.80,xa:0.71,gf:4,ga:2,res:"W"}]},
+  "Holanda":{f:"🇳🇱",g:"F",m:[{r:"Japón",xf:0.78,xa:0.59,gf:1,ga:1,res:"D"},{r:"Suecia",xf:2.61,xa:1.01,gf:5,ga:1,res:"W"}]},
+  "Uruguay":{f:"🇺🇾",g:"H",m:[{r:"Arabia Saudí",xf:1.54,xa:0.99,gf:1,ga:1,res:"D"},{r:"Cabo Verde",xf:2.32,xa:0.88,gf:2,ga:2,res:"D"}]},
+  "Noruega":{f:"🇳🇴",g:"I",m:[{r:"Irak",xf:2.53,xa:0.77,gf:4,ga:1,res:"W"},{r:"Senegal",xf:2.80,xa:1.20,gf:3,ga:2,res:"W"}]},
+  "México":{f:"🇲🇽",g:"A",m:[{r:"Sudáfrica",xf:1.41,xa:0.07,gf:2,ga:0,res:"W"},{r:"Corea del Sur",xf:0.48,xa:0.69,gf:1,ga:0,res:"W"}]},
+  "EEUU":{f:"🇺🇸",g:"D",m:[{r:"Paraguay",xf:1.35,xa:0.47,gf:4,ga:1,res:"W"},{r:"Australia",xf:1.08,xa:0.35,gf:2,ga:0,res:"W"}]},
+  "Japón":{f:"🇯🇵",g:"F",m:[{r:"Holanda",xf:0.59,xa:0.78,gf:1,ga:1,res:"D"},{r:"Túnez",xf:2.13,xa:0.05,gf:4,ga:0,res:"W"}]},
+  "Suiza":{f:"🇨🇭",g:"B",m:[{r:"Qatar",xf:3.24,xa:0.76,gf:1,ga:1,res:"D"},{r:"Bosnia",xf:2.06,xa:0.23,gf:4,ga:1,res:"W"}]},
+  "Marruecos":{f:"🇲🇦",g:"C",m:[{r:"Brasil",xf:1.53,xa:1.23,gf:1,ga:1,res:"D"},{r:"Escocia",xf:0.99,xa:0.51,gf:1,ga:0,res:"W"}]},
+  "Colombia":{f:"🇨🇴",g:"K",m:[{r:"Uzbekistán",xf:1.62,xa:1.16,gf:3,ga:1,res:"W"}]},
+  "Bélgica":{f:"🇧🇪",g:"G",m:[{r:"Egipto",xf:1.35,xa:1.08,gf:1,ga:1,res:"D"},{r:"Irán",xf:1.79,xa:0.62,gf:0,ga:0,res:"D"}]},
+  "Egipto":{f:"🇪🇬",g:"G",m:[{r:"Bélgica",xf:1.08,xa:1.35,gf:1,ga:1,res:"D"},{r:"Nueva Zelanda",xf:1.87,xa:1.24,gf:3,ga:1,res:"W"}]},
+  "Turquía":{f:"🇹🇷",g:"D",m:[{r:"Australia",xf:1.33,xa:0.77,gf:0,ga:2,res:"L"},{r:"Paraguay",xf:2.17,xa:0.32,gf:0,ga:1,res:"L"}]},
+  "Senegal":{f:"🇸🇳",g:"I",m:[{r:"Francia",xf:0.56,xa:1.79,gf:1,ga:3,res:"L"},{r:"Noruega",xf:1.20,xa:2.80,gf:2,ga:3,res:"L"}]},
+  "Austria":{f:"🇦🇹",g:"J",m:[{r:"Jordania",xf:1.66,xa:0.53,gf:3,ga:1,res:"W"},{r:"Argentina",xf:0.50,xa:2.62,gf:0,ga:2,res:"L"}]},
+  "Costa de Marfil":{f:"🇨🇮",g:"E",m:[{r:"Ecuador",xf:1.68,xa:1.03,gf:1,ga:0,res:"W"},{r:"Alemania",xf:1.22,xa:1.89,gf:1,ga:2,res:"L"}]},
+  "Canadá":{f:"🇨🇦",g:"B",m:[{r:"Bosnia",xf:1.25,xa:0.98,gf:1,ga:1,res:"D"},{r:"Qatar",xf:4.75,xa:0.18,gf:6,ga:0,res:"W"}]},
+  "Suecia":{f:"🇸🇪",g:"F",m:[{r:"Túnez",xf:1.36,xa:0.28,gf:5,ga:1,res:"W"},{r:"Holanda",xf:1.01,xa:2.61,gf:1,ga:5,res:"L"}]},
+  "Australia":{f:"🇦🇺",g:"D",m:[{r:"Turquía",xf:0.77,xa:1.33,gf:2,ga:0,res:"W"},{r:"EEUU",xf:0.35,xa:1.08,gf:0,ga:2,res:"L"}]},
+  "Irán":{f:"🇮🇷",g:"G",m:[{r:"Nueva Zelanda",xf:1.50,xa:1.24,gf:2,ga:2,res:"D"},{r:"Bélgica",xf:0.62,xa:1.79,gf:0,ga:0,res:"D"}]},
+  "Ecuador":{f:"🇪🇨",g:"E",m:[{r:"Costa de Marfil",xf:1.03,xa:1.68,gf:0,ga:1,res:"L"},{r:"Curazao",xf:3.05,xa:0.48,gf:0,ga:0,res:"D"}]},
+  "Escocia":{f:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",g:"C",m:[{r:"Haití",xf:1.05,xa:1.21,gf:1,ga:0,res:"W"},{r:"Marruecos",xf:0.51,xa:0.99,gf:0,ga:1,res:"L"}]},
+  "Ghana":{f:"🇬🇭",g:"L",m:[{r:"Panamá",xf:1.31,xa:0.75,gf:1,ga:0,res:"W"}]},
+  "Paraguay":{f:"🇵🇾",g:"D",m:[{r:"EEUU",xf:0.47,xa:1.35,gf:1,ga:4,res:"L"},{r:"Turquía",xf:0.32,xa:2.17,gf:1,ga:0,res:"W"}]},
+  "Corea del Sur":{f:"🇰🇷",g:"A",m:[{r:"Czechia",xf:1.84,xa:0.81,gf:2,ga:1,res:"W"},{r:"México",xf:0.69,xa:0.48,gf:0,ga:1,res:"L"}]}
+};
+
+const PHASE = {grupos:1,r32:0.94,octavos:0.92,cuartos:0.90,semi:0.88,final:0.85};
+const MOT   = {alta:1.08,media:1.00,baja:0.88};
+const KO    = new Set(['octavos','cuartos','semi','final']);
+
+/* =================================================
+   MATH UTILS
+   ================================================= */
+const LF = (() => { const a=[0]; for(let i=1;i<=15;i++) a.push(a[i-1]+Math.log(i)); return a; })();
+
+function pmf(k,l){ if(l<=0) return k===0?1:0; if(k<0||k>15) return 0; return Math.exp(k*Math.log(l)-l-LF[k]); }
+function cdf(k,l){ let s=0; for(let i=0;i<=k;i++) s+=pmf(i,l); return Math.min(s,1); }
+
+function matrix(lL,lV){
+  const m=Array.from({length:10},()=>new Array(10).fill(0));
+  let t=0;
+  for(let h=0;h<10;h++) for(let a=0;a<10;a++){ m[h][a]=pmf(h,lL)*pmf(a,lV); t+=m[h][a]; }
+  if(t>0) for(let h=0;h<10;h++) for(let a=0;a<10;a++) m[h][a]/=t;
+  return m;
+}
+
+/* =================================================
+   STORAGE
+   ================================================= */
+const sLS=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(_){} };
+const gLS=(k,d)=>{ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v); }catch(_){ return d; } };
+
+/* =================================================
+   DATA
+   ================================================= */
+function teamStats(name){
+  const t=FB[name]; if(!t||!t.m.length) return null;
+  const ms=t.m; const n=ms.length;
+  let xf=0,xa=0,gf=0,ga=0,W=0,D=0,L=0;
+  for(const m of ms){ xf+=m.xf; xa+=m.xa; gf+=m.gf; ga+=m.ga;
+    if(m.res==='W') W++; else if(m.res==='D') D++; else L++; }
+  return { xgf:xf/n, xga:xa/n, gf:gf/n, ga:ga/n, W,D,L, n,
+    cornersAvg:5.0, yellowAvg:1.9,
+    pG1H:0.72, pO051H:0.72, pO052H:0.86 };
+}
+
+async function fetchEP(path){
+  const ck='wc26_cache_'+path.replace(/\W/g,'_');
+  const c=gLS(ck,null);
+  if(c&&(Date.now()/1000-c.ts)<7200) return c.data;
+  const key=gLS('wc26_apikey',''); if(!key) return null;
+  try{
+    const r=await fetch('https://api.wc2026api.com/'+path,{headers:{Authorization:'Bearer '+key}});
+    if(!r.ok) throw 0;
+    const data=await r.json();
+    sLS(ck,{ts:Date.now()/1000,data}); return data;
+  }catch(_){ return null; }
+}
+
+/* =================================================
+   ENGINE
+   ================================================= */
+function adjXG(sL,sV,adj){
+  const rawL=sL.xgf*0.65+sV.xga*0.35;
+  const rawV=sV.xgf*0.65+sL.xga*0.35;
+  const pf=PHASE[adj.ph]||1;
+  return {
+    lL: rawL*pf*(MOT[adj.mL]||1)*(adj.iL?0.85:1),
+    lV: rawV*pf*(MOT[adj.mV]||1)*(adj.iV?0.85:1)
+  };
+}
+
+function ahSimple(M,line){
+  let pL=0,pV=0,pVoid=0;
+  for(let h=0;h<10;h++) for(let a=0;a<10;a++){
+    const d=h-a+line;
+    if(d>0.001) pL+=M[h][a];
+    else if(d<-0.001) pV+=M[h][a];
+    else pVoid+=M[h][a];
+  }
+  return {pL,pV,pVoid};
+}
+
+function ah(M,line){
+  const Q={'-0.75':[-0.5,-1],'-0.25':[0,-0.5],'0.25':[0,0.5],'0.75':[0.5,1]};
+  for(const[q,[l1,l2]] of Object.entries(Q)){
+    if(Math.abs(line-parseFloat(q))<0.001){
+      const r1=ahSimple(M,l1),r2=ahSimple(M,l2);
+      return {pL:(r1.pL+r2.pL)/2,pV:(r1.pV+r2.pV)/2,pVoid:(r1.pVoid+r2.pVoid)/2};
+    }
+  }
+  return ahSimple(M,line);
+}
+
+function compute(sL,sV,adj){
+  const {lL,lV}=adjXG(sL,sV,adj);
+  const M=matrix(lL,lV);
+  let p1=0,pX=0,p2=0,o25=0;
+  for(let h=0;h<10;h++) for(let a=0;a<10;a++){
+    const c=M[h][a];
+    if(h>a) p1+=c; else if(h===a) pX+=c; else p2+=c;
+    if(h+a>2) o25+=c;
+  }
+  const btts=(1-cdf(0,lL))*(1-cdf(0,lV));
+  const pf=PHASE[adj.ph]||1;
+  const isKO=KO.has(adj.ph);
+  const lC=(sL.cornersAvg+sV.cornersAvg)*pf;
+  const lK=(sL.yellowAvg+sV.yellowAvg)*pf*(isKO?1.1:1);
+  const pG1H=Math.min(0.99,1-(1-sL.pG1H)*(1-sV.pG1H));
+  const pO051H=Math.min(0.99,1-(1-sL.pO051H)*(1-sV.pO051H));
+  const pO052H=Math.min(0.99,1-(1-sL.pO052H)*(1-sV.pO052H));
+  const ahLine=parseFloat(document.getElementById('ah-line').value)||0;
+  const ahR=ah(M,ahLine);
+  return {lL,lV,p1,pX,p2,o25,u25:1-o25,btts,nbtts:1-btts,ahR,
+    c95:1-cdf(9,lC),c105:1-cdf(10,lC),
+    k35:1-cdf(3,lK),k45:1-cdf(4,lK),
+    pG1H,pG1Hn:1-pG1H,pO051H,pO052H,lC,lK};
+}
+
+/* =================================================
+   EV
+   ================================================= */
+function ev(p,o){ if(!o||o<1.01) return null; return p*o-1; }
+function evChip(e){
+  if(e===null) return '<span class="chip chip-n">—</span>';
+  const cls=e>=0.05?'chip-g':e>=0?'chip-y':'chip-r';
+  return `<span class="chip ${cls}">${e>=0?'+':''}${(e*100).toFixed(1)}%</span>`;
+}
+function houseMg(o1,oX,o2){ if(!o1||!oX||!o2||o1<1.01||oX<1.01||o2<1.01) return null; return(1/o1+1/oX+1/o2-1)*100; }
+function fmt(v){ return (v*100).toFixed(1)+'%'; }
+function n2(v){ return v.toFixed(2); }
+
+/* =================================================
+   AUTO TEXT
+   ================================================= */
+function genText(nL,nV,res,sL,sV){
+  const {lL,lV,p1,pX,p2,o25,btts,c95,k35,pG1H,lC,lK}=res;
+  const fav=p1>p2+0.05?nL:p2>p1+0.05?nV:null;
+  const fp=fav?Math.max(p1,p2):null;
+  const s1=fav
+    ?`<strong>${nL}</strong> (xG ${n2(lL)}) vs <strong>${nV}</strong> (xG ${n2(lV)}). El modelo da a <strong>${fav}</strong> como favorito con ${fmt(fp)} de probabilidad.`
+    :`<strong>${nL}</strong> (xG ${n2(lL)}) vs <strong>${nV}</strong> (xG ${n2(lV)}). Partido muy igualado — local ${fmt(p1)}, empate ${fmt(pX)}, visitante ${fmt(p2)}.`;
+  const s2=`Over 2.5: ${fmt(o25)} | BTTS (ambos marcan): ${fmt(btts)}.`;
+  const s3=`~${lC.toFixed(1)} córneres esperados (over 9.5 → ${fmt(c95)}) y ~${lK.toFixed(1)} tarjetas (over 3.5 → ${fmt(k35)}). Gol en 1ª mitad: ${fmt(pG1H)}.`;
+  const mn=Math.min(sL.n,sV.n);
+  const conf=mn<2?'muy limitada (1 partido)':mn<4?'moderada':'razonable';
+  const s4=`Muestra estadística ${conf} — orientativo, no determinante.`;
+  return [s1,s2,s3,s4].join(' ');
+}
+
+/* =================================================
+   UI STATE
+   ================================================= */
+let stL=null,stV=null,RES=null;
+
+/* =================================================
+   ANALIZAR UI
+   ================================================= */
+function fillDropdowns(){
+  const teams=Object.keys(FB).sort();
+  ['sel-l','sel-v'].forEach(id=>{
+    const sel=document.getElementById(id);
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— Seleccionar —</option>';
+    teams.forEach(t=>{
+      const o=document.createElement('option');
+      o.value=t; o.textContent=FB[t].f+' '+t;
+      sel.appendChild(o);
+    });
+    if(cur) sel.value=cur;
+  });
+}
+
+function renderCard(id,name,st){
+  const t=FB[name];
+  document.getElementById(id).innerHTML=`
+    <div class="tc-head">
+      <span class="tc-flag">${t.f}</span>
+      <div><div class="tc-name">${name}</div><div class="tc-meta">Grupo ${t.g} · ${st.n} partidos · ${st.W}V ${st.D}E ${st.L}D</div></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-item"><span class="stat-val">${n2(st.xgf)}</span><span class="stat-lbl">xG favor</span></div>
+      <div class="stat-item"><span class="stat-val">${n2(st.xga)}</span><span class="stat-lbl">xG contra</span></div>
+      <div class="stat-item"><span class="stat-val">${n2(st.gf)}</span><span class="stat-lbl">Goles/ptdo</span></div>
+    </div>
+    ${t.m.map(m=>`<div class="match-row"><span>${t.f} vs ${m.r}</span><span>${m.gf}-${m.ga}&nbsp;<span style="color:var(--muted);font-size:10px">(xG ${m.xf.toFixed(1)}-${m.xa.toFixed(1)})</span></span><span class="r${m.res}">${m.res}</span></div>`).join('')}
+  `;
+}
+
+function renderBars(p1,pX,p2,nL,nV){
+  const tot=p1+pX+p2;
+  const f1=p1/tot,fX=pX/tot,f2=p2/tot;
+  document.getElementById('prob-bars').innerHTML=`
+    <div class="prob-bar-labs"><span>${nL}</span><span>Empate</span><span>${nV}</span></div>
+    <div class="prob-bar">
+      <div class="pb-l" style="flex:${f1}">${fmt(p1)}</div>
+      <div class="pb-d" style="flex:${fX}">${fmt(pX)}</div>
+      <div class="pb-v" style="flex:${f2}">${fmt(p2)}</div>
+    </div>`;
+  document.getElementById('xg-sum').textContent=`xG local: ${RES?n2(RES.lL):'—'} | xG visitante: ${RES?n2(RES.lV):'—'}`;
+}
+
+function renderMkts(res){
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=fmt(v); };
+  const setEV=(eid,p,oid)=>{ const o=parseFloat(document.getElementById(oid)?.value); const e=document.getElementById(eid); if(e) e.innerHTML=evChip(ev(p,o)); };
+
+  set('p1',res.p1); set('pX',res.pX); set('p2',res.p2);
+  set('po25',res.o25); set('pu25',res.u25);
+  set('pbttsy',res.btts); set('pbttnn',res.nbtts);
+  set('pah',res.ahR.pL);
+  set('pc95',res.c95); set('pc105',res.c105);
+  set('pk35',res.k35); set('pk45',res.k45);
+  set('pg1hy',res.pG1H); set('pg1hn',res.pG1Hn);
+  set('po051h',res.pO051H); set('po052h',res.pO052H);
+
+  const mktMap=[
+    ['ev1',res.p1,'o1'],['evX',res.pX,'oX'],['ev2',res.p2,'o2'],
+    ['evo25',res.o25,'oo25'],['evu25',res.u25,'ou25'],
+    ['evbttsy',res.btts,'obttsy'],['evbttsn',res.nbtts,'obttsn'],
+    ['evc95',res.c95,'oc95'],['evc105',res.c105,'oc105'],
+    ['evk35',res.k35,'ok35'],['evk45',res.k45,'ok45'],
+    ['evg1hy',res.pG1H,'og1hy'],['evg1hn',res.pG1Hn,'og1hn'],
+    ['evo051h',res.pO051H,'oo051h'],['evo052h',res.pO052H,'oo052h']
+  ];
+  mktMap.forEach(([eid,p,oid])=>setEV(eid,p,oid));
+
+  const ahO=parseFloat(document.getElementById('oah')?.value);
+  const ahEV=ev(res.ahR.pL,ahO);
+  const ahEl=document.getElementById('evah'); if(ahEl) ahEl.innerHTML=evChip(ahEV);
+
+  const o1=parseFloat(document.getElementById('o1')?.value);
+  const oX=parseFloat(document.getElementById('oX')?.value);
+  const o2=parseFloat(document.getElementById('o2')?.value);
+  const hm=houseMg(o1,oX,o2);
+  const hmEl=document.getElementById('house-mg');
+  if(hmEl){ if(hm!==null){ hmEl.innerHTML=`Margen casa: <span>${hm.toFixed(1)}%</span>`; hmEl.classList.remove('hidden'); } else hmEl.classList.add('hidden'); }
+}
+
+function doAnalysis(){
+  const nL=document.getElementById('sel-l').value;
+  const nV=document.getElementById('sel-v').value;
+  if(!nL||!nV||nL===nV) return;
+  stL=teamStats(nL); stV=teamStats(nV);
+  if(!stL||!stV) return;
+  renderCard('card-l',nL,stL);
+  renderCard('card-v',nV,stV);
+  document.getElementById('stats-sec').classList.remove('hidden');
+  document.getElementById('prob-sec').classList.remove('hidden');
+  document.getElementById('mkt-sec').classList.remove('hidden');
+  doRecompute();
+}
+
+function doRecompute(){
+  const nL=document.getElementById('sel-l').value;
+  const nV=document.getElementById('sel-v').value;
+  if(!stL||!stV||!nL||!nV) return;
+  const adj={
+    ph:document.getElementById('adj-ph').value,
+    mL:document.getElementById('adj-ml').value,
+    mV:document.getElementById('adj-mv').value,
+    iL:document.getElementById('inj-l').checked,
+    iV:document.getElementById('inj-v').checked
+  };
+  RES=compute(stL,stV,adj);
+  renderBars(RES.p1,RES.pX,RES.p2,nL,nV);
+  renderMkts(RES);
+  document.getElementById('analysis-txt').innerHTML=genText(nL,nV,RES,stL,stV);
+  document.getElementById('xg-sum').textContent=`xG local: ${n2(RES.lL)} | xG visitante: ${n2(RES.lV)}`;
+}
+
+function initAnalizar(){
+  fillDropdowns();
+  document.getElementById('sel-l').addEventListener('change',doAnalysis);
+  document.getElementById('sel-v').addEventListener('change',doAnalysis);
+  ['adj-ph','adj-ml','adj-mv','inj-l','inj-v'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('change',doRecompute);
+  });
+  document.getElementById('ah-line').addEventListener('change',()=>{ if(RES) renderMkts(RES); });
+  ['o1','oX','o2','oo25','ou25','obttsy','obttsn','oah','oc95','oc105','ok35','ok45','og1hy','og1hn','oo051h','oo052h'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input',()=>{ if(RES) renderMkts(RES); });
+  });
+}
+
+/* =================================================
+   KELLY UI
+   ================================================= */
+function renderKelly(){
+  const p=parseFloat(document.getElementById('kl-p').value)/100;
+  const o=parseFloat(document.getElementById('kl-o').value);
+  const b=parseFloat(document.getElementById('kl-b').value)||gLS('wc26_bankroll',0);
+  const box=document.getElementById('kl-res');
+  if(!p||!o||!b||p<=0||p>=1||o<1.01){ box.innerHTML=''; return; }
+  const kelly=(p*(o-1)-(1-p))/(o-1);
+  const half=kelly/2;
+  const stake=Math.max(0,half)*b;
+  const e=p*o-1;
+  if(e<0||kelly<0){
+    box.innerHTML=`<div class="kl-box"><div style="color:var(--red);font-size:14px">⚠ EV negativo (${(e*100).toFixed(1)}%) — no apostar</div></div>`;
+    return;
+  }
+  box.innerHTML=`<div class="kl-box">
+    <div class="kl-stake">€${stake.toFixed(2)}</div>
+    <div class="kl-sub">Half-Kelly: ${(half*100).toFixed(1)}% del bankroll</div>
+    <div class="kl-sub">EV: ${(e*100).toFixed(1)}% &nbsp;|&nbsp; Kelly completo: ${(kelly*100).toFixed(1)}%</div>
+  </div>`;
+}
+
+function renderKellySummary(){
+  const bets=gLS('edge2026_bets',[]);
+  const s=bets.filter(b=>b.result);
+  const ts=s.reduce((a,b)=>a+b.stake,0);
+  const tp=s.reduce((a,b)=>a+(b.profit||0),0);
+  const wins=s.filter(b=>b.result==='WIN').length;
+  const roi=ts>0?(tp/ts*100).toFixed(1)+'%':'—';
+  const bk=gLS('wc26_bankroll',0);
+  document.getElementById('kl-summary').innerHTML=`
+    <div class="g3">
+      <div class="stat-item"><span class="stat-val" style="font-size:16px">${bets.length}</span><span class="stat-lbl">Apuestas</span></div>
+      <div class="stat-item"><span class="stat-val" style="font-size:16px;color:${parseFloat(roi)>=0?'var(--green)':'var(--red)'}">${roi}</span><span class="stat-lbl">ROI</span></div>
+      <div class="stat-item"><span class="stat-val" style="font-size:16px">${s.length?Math.round(wins/s.length*100)+'%':'—'}</span><span class="stat-lbl">Win rate</span></div>
+    </div>
+    <div class="muted mt8">Bankroll: €${bk} &nbsp;|&nbsp; Apostado: €${ts.toFixed(2)} &nbsp;|&nbsp; P&amp;L: <span style="color:${tp>=0?'var(--green)':'var(--red)'}">€${tp.toFixed(2)}</span></div>`;
+}
+
+function initBankroll(){
+  ['kl-p','kl-o','kl-b'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderKelly));
+  document.getElementById('kl-b')?.addEventListener('change',e=>{ sLS('wc26_bankroll',parseFloat(e.target.value)||0); renderKellySummary(); });
+  const bk=gLS('wc26_bankroll',''); if(bk) document.getElementById('kl-b').value=bk;
+  renderKellySummary();
+}
+
+/* =================================================
+   HISTORIAL UI
+   ================================================= */
+function renderHistStats(){
+  const bets=gLS('edge2026_bets',[]);
+  const s=bets.filter(b=>b.result);
+  const ts=s.reduce((a,b)=>a+b.stake,0);
+  const tp=s.reduce((a,b)=>a+(b.profit||0),0);
+  const wins=s.filter(b=>b.result==='WIN').length;
+  const roi=ts>0?(tp/ts*100).toFixed(1)+'%':'—';
+  const wr=s.length?Math.round(wins/s.length*100)+'%':'—';
+  document.getElementById('hist-stats').innerHTML=`
+    <div class="sum-stat"><span class="sum-val">${bets.length}</span><span class="sum-lbl">Apuestas</span></div>
+    <div class="sum-stat"><span class="sum-val" style="color:${parseFloat(roi)>=0||roi==='—'?'var(--green)':'var(--red)'}">${roi}</span><span class="sum-lbl">ROI</span></div>
+    <div class="sum-stat"><span class="sum-val" style="color:${tp>=0?'var(--green)':'var(--red)'}">€${tp.toFixed(2)}</span><span class="sum-lbl">P&amp;L</span></div>
+    <div class="sum-stat"><span class="sum-val">${wr}</span><span class="sum-lbl">Win Rate</span></div>`;
+}
+
+function renderBetList(){
+  const bets=gLS('edge2026_bets',[]).slice().reverse();
+  const el=document.getElementById('bet-list');
+  if(!bets.length){ el.innerHTML='<div class="card muted" style="text-align:center;padding:20px">Sin apuestas aún. Añade tu primera apuesta arriba.</div>'; return; }
+  el.innerHTML=bets.map(b=>{
+    const pr=b.profit!=null?` · <span style="color:${b.profit>=0?'var(--green)':'var(--red)'}">€${b.profit>=0?'+':''}${b.profit.toFixed(2)}</span>`:'';
+    return `<div class="bet-card">
+      <div class="bet-desc">${b.desc}</div>
+      <div class="bet-meta">${b.market} &nbsp;@${b.odds} &nbsp;Stake: €${b.stake}${pr}</div>
+      <div class="bet-acts">
+        <button class="btn-sm btn-win${b.result==='WIN'?' on':''}" onclick="setBR('${b.id}','WIN')">✓ WIN</button>
+        <button class="btn-sm btn-loss${b.result==='LOSS'?' on':''}" onclick="setBR('${b.id}','LOSS')">✗ LOSS</button>
+        <button class="btn-sm btn-del" onclick="delB('${b.id}')">Borrar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.setBR=function(id,result){
+  const bets=gLS('edge2026_bets',[]);
+  const b=bets.find(x=>x.id===id); if(!b) return;
+  b.result=result; b.profit=result==='WIN'?b.stake*(b.odds-1):-b.stake;
+  sLS('edge2026_bets',bets); renderBetList(); renderHistStats(); renderKellySummary();
+};
+window.delB=function(id){
+  sLS('edge2026_bets',gLS('edge2026_bets',[]).filter(x=>x.id!==id));
+  renderBetList(); renderHistStats(); renderKellySummary();
+};
+
+function initHistorial(){
+  renderHistStats(); renderBetList();
+  document.getElementById('btn-add').addEventListener('click',()=>{
+    const desc=document.getElementById('bet-desc').value.trim();
+    const mkt=document.getElementById('bet-mkt').value.trim();
+    const odds=parseFloat(document.getElementById('bet-odds').value);
+    const stake=parseFloat(document.getElementById('bet-stake').value);
+    if(!desc||!odds||!stake||odds<1.01||stake<=0){ alert('Rellena descripción, cuota (≥1.01) y stake (>0)'); return; }
+    const bets=gLS('edge2026_bets',[]);
+    bets.push({id:Date.now().toString(),desc,market:mkt||'—',odds,stake,result:null,profit:null,createdAt:new Date().toISOString()});
+    sLS('edge2026_bets',bets);
+    ['bet-desc','bet-mkt','bet-odds','bet-stake'].forEach(id=>{ document.getElementById(id).value=''; });
+    renderBetList(); renderHistStats(); renderKellySummary();
+  });
+}
+
+/* =================================================
+   CONFIG
+   ================================================= */
+function setApiStatus(ok){
+  const el=document.getElementById('api-badge');
+  el.textContent=ok?'● Conectada':'● Sin clave'; el.className='api-badge '+(ok?'api-ok':'api-err');
+}
+
+async function testApi(){
+  const key=gLS('wc26_apikey',''); if(!key){ setApiStatus(false); return; }
+  try{
+    const r=await fetch('https://api.wc2026api.com/standings',{headers:{Authorization:'Bearer '+key}});
+    setApiStatus(r.ok);
+  }catch(_){ setApiStatus(false); }
+}
+
+function exportCSV(){
+  const bets=gLS('edge2026_bets',[]); if(!bets.length){ alert('No hay apuestas'); return; }
+  const rows=[['Fecha','Descripción','Mercado','Cuota','Stake','Resultado','Beneficio']];
+  bets.forEach(b=>rows.push([b.createdAt?.slice(0,10)||'',`"${(b.desc||'').replace(/"/g,'""')}"`,b.market||'',b.odds||'',b.stake||'',b.result||'Pendiente',b.profit!=null?b.profit.toFixed(2):'']));
+  const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='edge2026_historial.csv'; a.click();
+}
+
+function initConfig(){
+  const modal=document.getElementById('modal-cfg');
+  document.getElementById('btn-cfg').addEventListener('click',()=>{
+    document.getElementById('cfg-key').value=gLS('wc26_apikey','');
+    document.getElementById('cfg-bk').value=gLS('wc26_bankroll','')||'';
+    modal.classList.add('open'); testApi();
+  });
+  document.getElementById('close-cfg').addEventListener('click',()=>modal.classList.remove('open'));
+  modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('open'); });
+  document.getElementById('cfg-save').addEventListener('click',()=>{
+    sLS('wc26_apikey',document.getElementById('cfg-key').value.trim());
+    const bk=parseFloat(document.getElementById('cfg-bk').value)||0;
+    sLS('wc26_bankroll',bk);
+    const klb=document.getElementById('kl-b'); if(klb) klb.value=bk||'';
+    testApi(); modal.classList.remove('open'); renderKellySummary();
+  });
+  document.getElementById('cfg-cache').addEventListener('click',()=>{
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith('wc26_cache_'));
+    keys.forEach(k=>localStorage.removeItem(k));
+    alert(`Caché borrada (${keys.length} entradas)`);
+  });
+  document.getElementById('cfg-csv').addEventListener('click',exportCSV);
+  setApiStatus(!!gLS('wc26_apikey',''));
+}
+
+/* =================================================
+   TABS
+   ================================================= */
+function initTabs(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      const pane=document.getElementById('pane-'+btn.dataset.p);
+      if(pane) pane.classList.add('active');
+      if(btn.dataset.p==='bankroll') renderKellySummary();
+    });
+  });
+}
+
+/* =================================================
+   BOOT
+   ================================================= */
+document.addEventListener('DOMContentLoaded',()=>{
+  initTabs(); initConfig(); initAnalizar(); initBankroll(); initHistorial();
+});
+</script>
+</body>
+</html>
