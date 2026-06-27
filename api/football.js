@@ -1,6 +1,8 @@
 const ALLOWED_ENDPOINTS = new Set([
   'status',
   'fixtures',
+  'fixtures/statistics',
+  'teams',
   'teams/statistics',
   'predictions',
   'odds'
