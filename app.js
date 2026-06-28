@@ -16,6 +16,36 @@ const ELO_BASELINE = 1500;
 const ELO_CLAMP_MIN = 0.6;
 const ELO_CLAMP_MAX = 1.4;
 
+// FBref squad IDs para selecciones nacionales → xG real (Copa del Mundo, clasificatorias, amistosos).
+// Clave: nombre del equipo tal como lo devuelve ESPN (teamData displayName).
+// Para añadir equipos: visitar fbref.com/en/squads/{id}/ y copiar el ID hexadecimal de la URL.
+const FBREF_IDS={
+  // WC2026 sedes
+  'United States':'7f9f59d8','Mexico':'5c2fdebb','Canada':'b5df3b3e',
+  // Europa
+  'Spain':'cffcb527','Germany':'1faf5838','France':'fbdd60ef',
+  'England':'cce6b0e5','Portugal':'df6b1f18','Netherlands':'f2337a43',
+  'Belgium':'fb1d2f30','Italy':'a2d435d3','Switzerland':'a4cf1f4e',
+  'Croatia':'adfa7a07','Denmark':'46f1f200','Austria':'f7d27eea',
+  'Serbia':'18a74cc3','Turkey':'b07a2bef','Ukraine':'a96e671a',
+  'Scotland':'14afd4ea','Poland':'41b4543d',
+  // Sudamérica
+  'Argentina':'f9fddd6e','Brazil':'e8a72d4e','Colombia':'fb3d79ee',
+  'Uruguay':'7f4f45b5','Ecuador':'aa6c44b7','Paraguay':'50e14f7e',
+  'Chile':'f6b84695','Venezuela':'9dea4b60',
+  // CONCACAF (excl. sedes)
+  'Panama':'87b9eedb','Costa Rica':'a51b4cbc','Honduras':'d9bad9b7',
+  // África
+  'Morocco':'ddc2fc0e','Senegal':'32fd6f91','South Africa':'d7e97db5',
+  'Nigeria':'66213bd7','Egypt':'0ddc0a6c','Cameroon':'f99ea3ab',
+  'Ghana':'ff601305','Algeria':'b827785e','Tunisia':'33d20e7c',
+  'Mali':'8b1d8f0f','Ivory Coast':'de0f3ead',
+  // Asia / Oceanía
+  'Japan':'7c968a68','Korea Republic':'f57b6e3d','Australia':'b3691091',
+  'Iran':'7c21d786','IR Iran':'7c21d786','Saudi Arabia':'7c47a4e4',
+  'Qatar':'93efc79e','New Zealand':'a4eebbf3',
+};
+
 // ESPN team names → eloratings.net file names (spaces become underscores for most;
 // exceptions where the name differs from the standard English form).
 const WORLD_ELO_NAMES={
@@ -131,24 +161,45 @@ function updateXGCells(){
 }
 
 async function enrichTeam(rows,teamName,statusEl){
+  // Buscar ID de FBref: primero coincidencia exacta, luego normName
+  let fbrefId=FBREF_IDS[teamName];
+  if(!fbrefId){
+    const normKey=Object.keys(FBREF_IDS).find(k=>normName(k)===normName(teamName));
+    fbrefId=normKey?FBREF_IDS[normKey]:null;
+  }
+  if(!fbrefId){
+    statusEl.textContent=`${teamName}: sin ID de FBref — añádelo a FBREF_IDS en app.js.`;
+    return rows.filter(r=>r.xg!=null).length;
+  }
+
+  statusEl.textContent=`${teamName}: cargando historial xG de FBref…`;
+  let fbData;
+  try{
+    const resp=await fetch(`/api/fbref?team_id=${encodeURIComponent(fbrefId)}`);
+    const p=await resp.json();
+    if(resp.status===429){
+      statusEl.textContent=`${teamName}: FBref rate limit (429). Intenta en unos minutos.`;
+      return rows.filter(r=>r.xg!=null).length;
+    }
+    if(!resp.ok||!p.ok||!Array.isArray(p.data)){
+      statusEl.textContent=`${teamName}: FBref no disponible (${resp.status} — ${p.error||'sin datos'}).`;
+      return rows.filter(r=>r.xg!=null).length;
+    }
+    fbData=p.data;
+  }catch(_){
+    statusEl.textContent=`${teamName}: error contactando FBref.`;
+    return rows.filter(r=>r.xg!=null).length;
+  }
+
   let hits=0;
-  for(let i=0;i<rows.length;i++){
-    const row=rows[i];
+  for(const row of rows){
     if(row.xg!=null){hits++;continue}
-    if(!row.id)continue;
-    statusEl.textContent=`${teamName}: xG partido ${i+1}/${rows.length}…`;
-    try{
-      const resp=await fetch(`/api/espn?mode=summary&event=${encodeURIComponent(row.id)}`);
-      const p=await resp.json();
-      if(!resp.ok||!p.ok||!p.data)continue;
-      const xg=extractXGFromESPN(p.data,teamName);
-      const xga=extractXGFromESPN(p.data,row.opponent);
-      if(xg!=null){
-        const ck=Object.keys(cache.matches).find(k=>{const m=cache.matches[k];return m.date===row.date&&m.team===row.team});
-        if(ck){cache.matches[ck].xg=xg;cache.matches[ck].xgAgainst=xga;cache.matches[ck].cachedAt=Date.now()}
-        hits++;
-      }
-    }catch(_){}
+    // Match por fecha exacta + rival fuzzy
+    const fbMatch=fbData.find(fm=>fm.date===row.date&&fuzzyTeam(fm.opponent,row.opponent));
+    if(!fbMatch||fbMatch.xg==null)continue;
+    const ck=Object.keys(cache.matches).find(k=>{const m=cache.matches[k];return m.date===row.date&&m.team===row.team});
+    if(ck){cache.matches[ck].xg=fbMatch.xg;cache.matches[ck].xgAgainst=fbMatch.xga;cache.matches[ck].cachedAt=Date.now()}
+    hits++;
   }
   return hits;
 }
@@ -293,7 +344,7 @@ $('findCombos').onclick=()=>{const eligible=state.markets.filter(m=>m.comboEligi
 function renderTeam(id,data){const card=(label,value,digits=2)=>`<div class="stat"><span class="muted">${label}</span><b>${value==null?'—':Number(value).toFixed(digits)}</b></div>`;$(id).innerHTML=card('Goles a favor',data.gf)+card('Goles en contra',data.ga)+card('xG a favor',data.xg)+card('xGA en contra',data.xgAgainst)+card('Tiros',data.shots)+card('A puerta',data.sot)+card('Córners',data.corners)+card('Amarillas',data.yellow)+card('Posesión %',data.possession)+card('Partidos',data.matches,0)}
 function topScores(model){return [...model.scoreMatrix].sort((a,b)=>b.p-a.p).slice(0,6).map(row=>`<div class="topscore"><span>${state.homeName} ${row.a}-${row.b} ${state.awayName}</span><b>${pct(row.p)}</b></div>`).join('')}
 
-$('analyze').onclick=async()=>{if(!state.fixture)return;try{const teams=competitors(state.fixture);state.homeName=teamName(teams.home);state.awayName=teamName(teams.away);$('analysisStatus').textContent='Buscando historiales…';const[homeRows,awayRows]=await Promise.all([teamData(teamId(teams.home),state.homeName),teamData(teamId(teams.away),state.awayName)]);$('analysisStatus').textContent='Enriqueciendo pesos con World Elo…';const[homeEloCount,awayEloCount]=await Promise.all([enrichRowsWithElo(homeRows),enrichRowsWithElo(awayRows)]);const homeAggregate=aggregate(homeRows),awayAggregate=aggregate(awayRows);state.homeRows=homeRows;state.awayRows=awayRows;state.model=createModel(homeAggregate,awayAggregate);state.markets=createMarkets(state.model,state.homeName,state.awayName);state.selected.clear();$('homeName').textContent=state.homeName;$('awayName').textContent=state.awayName;renderTeam('homeStats',homeAggregate);renderTeam('awayStats',awayAggregate);$('homeCoverage').textContent=`Cobertura: ${homeAggregate.shotsCount}/${homeAggregate.matches} con tiros; ${homeAggregate.cornersCount}/${homeAggregate.matches} con córners; ${homeAggregate.yellowCount}/${homeAggregate.matches} con tarjetas.`;$('awayCoverage').textContent=`Cobertura: ${awayAggregate.shotsCount}/${awayAggregate.matches} con tiros; ${awayAggregate.cornersCount}/${awayAggregate.matches} con córners; ${awayAggregate.yellowCount}/${awayAggregate.matches} con tarjetas.`;$('matches').innerHTML=[...homeRows,...awayRows].map(row=>`<tr data-match="${row.date||''}||${row.team}"><td>${row.date||'—'}</td><td>${row.team}</td><td>${row.opponent}</td><td>${row.gf??'—'}-${row.ga??'—'}</td><td>${row.shots??'—'}</td><td>${row.sot??'—'}</td><td>${row.corners??'—'}</td><td>${row.yellow??'—'}</td><td class="xg-cell">${row.xg!=null?row.xg.toFixed(2):'—'}</td><td class="xga-cell">${row.xgAgainst!=null?row.xgAgainst.toFixed(2):'—'}</td><td class="elo-cell">${row.rivalElo!=null?Math.round(row.rivalElo):'—'}</td></tr>`).join('');$('confidence').textContent=state.model.confidence;$('confidence').className=state.model.confidence==='Media'?'good':state.model.confidence==='Baja'?'bad':'warn';$('xgTotal').textContent=(state.model.homeGoals+state.model.awayGoals).toFixed(2);$('cardsTotal').textContent=(state.model.homeCards+state.model.awayCards).toFixed(2);$('sampleSize').textContent=`${homeRows.length}+${awayRows.length}`;$('modelWarning').textContent=state.model.useHomeXG&&state.model.useAwayXG?'Modelo usando xG (ESPN) como base del λ. Ajuste por tiros omitido (xG ya incorpora calidad del tiro). Tarjetas y primera parte son aproximaciones.':state.model.useHomeXG||state.model.useAwayXG?'xG disponible para un equipo; modelo mixto. Analiza el otro para mayor precisión.':'Sin xG: modelo basado en goles reales. El xG de ESPN se carga automáticamente cuando ESPN lo incluye en el boxscore (partidos recientes de torneos principales).';$('topScores').innerHTML=topScores(state.model);renderMarkets();renderSelectedCombo();$('comboSuggestions').innerHTML='';$('analysisArea').classList.remove('hidden');const eloTotal=homeEloCount+awayEloCount,eloNote=eloTotal>0?` World Elo activo: ${eloTotal}/${homeRows.length+awayRows.length} partidos ponderados.`:' (World Elo no disponible, pesos sin ajuste de rival.)';$('analysisStatus').textContent=`Listo: ${homeRows.length} partidos de ${state.homeName} y ${awayRows.length} de ${state.awayName}.${eloNote}`}catch(error){$('analysisStatus').textContent='No se pudo completar: '+error.message}};
+$('analyze').onclick=async()=>{if(!state.fixture)return;try{const teams=competitors(state.fixture);state.homeName=teamName(teams.home);state.awayName=teamName(teams.away);$('analysisStatus').textContent='Buscando historiales…';const[homeRows,awayRows]=await Promise.all([teamData(teamId(teams.home),state.homeName),teamData(teamId(teams.away),state.awayName)]);$('analysisStatus').textContent='Enriqueciendo pesos con World Elo…';const[homeEloCount,awayEloCount]=await Promise.all([enrichRowsWithElo(homeRows),enrichRowsWithElo(awayRows)]);const homeAggregate=aggregate(homeRows),awayAggregate=aggregate(awayRows);state.homeRows=homeRows;state.awayRows=awayRows;state.model=createModel(homeAggregate,awayAggregate);state.markets=createMarkets(state.model,state.homeName,state.awayName);state.selected.clear();$('homeName').textContent=state.homeName;$('awayName').textContent=state.awayName;renderTeam('homeStats',homeAggregate);renderTeam('awayStats',awayAggregate);$('homeCoverage').textContent=`Cobertura: ${homeAggregate.shotsCount}/${homeAggregate.matches} con tiros; ${homeAggregate.cornersCount}/${homeAggregate.matches} con córners; ${homeAggregate.yellowCount}/${homeAggregate.matches} con tarjetas.`;$('awayCoverage').textContent=`Cobertura: ${awayAggregate.shotsCount}/${awayAggregate.matches} con tiros; ${awayAggregate.cornersCount}/${awayAggregate.matches} con córners; ${awayAggregate.yellowCount}/${awayAggregate.matches} con tarjetas.`;$('matches').innerHTML=[...homeRows,...awayRows].map(row=>`<tr data-match="${row.date||''}||${row.team}"><td>${row.date||'—'}</td><td>${row.team}</td><td>${row.opponent}</td><td>${row.gf??'—'}-${row.ga??'—'}</td><td>${row.shots??'—'}</td><td>${row.sot??'—'}</td><td>${row.corners??'—'}</td><td>${row.yellow??'—'}</td><td class="xg-cell">${row.xg!=null?row.xg.toFixed(2):'—'}</td><td class="xga-cell">${row.xgAgainst!=null?row.xgAgainst.toFixed(2):'—'}</td><td class="elo-cell">${row.rivalElo!=null?Math.round(row.rivalElo):'—'}</td></tr>`).join('');$('confidence').textContent=state.model.confidence;$('confidence').className=state.model.confidence==='Media'?'good':state.model.confidence==='Baja'?'bad':'warn';$('xgTotal').textContent=(state.model.homeGoals+state.model.awayGoals).toFixed(2);$('cardsTotal').textContent=(state.model.homeCards+state.model.awayCards).toFixed(2);$('sampleSize').textContent=`${homeRows.length}+${awayRows.length}`;$('modelWarning').textContent=state.model.useHomeXG&&state.model.useAwayXG?'Modelo usando xG (FBref) como base del λ. Ajuste por tiros omitido (xG ya incorpora calidad del tiro). Tarjetas y primera parte son aproximaciones.':state.model.useHomeXG||state.model.useAwayXG?'xG disponible para un equipo; modelo mixto. Analiza el otro para mayor precisión.':'Sin xG: modelo basado en goles reales. Usa "Enrich xG" para obtener xG de FBref (Copa del Mundo, clasificatorias, amistosos).';$('topScores').innerHTML=topScores(state.model);renderMarkets();renderSelectedCombo();$('comboSuggestions').innerHTML='';$('analysisArea').classList.remove('hidden');const eloTotal=homeEloCount+awayEloCount,eloNote=eloTotal>0?` World Elo activo: ${eloTotal}/${homeRows.length+awayRows.length} partidos ponderados.`:' (World Elo no disponible, pesos sin ajuste de rival.)';$('analysisStatus').textContent=`Listo: ${homeRows.length} partidos de ${state.homeName} y ${awayRows.length} de ${state.awayName}.${eloNote}`}catch(error){$('analysisStatus').textContent='No se pudo completar: '+error.message}};
 
 $('enrichXG').onclick=async()=>{
   if(!state.homeName||!state.awayName){$('xgStatus').textContent='Primero analiza un partido.';return}
@@ -319,7 +370,7 @@ $('enrichXG').onclick=async()=>{
     $('cardsTotal').textContent=(state.model.homeCards+state.model.awayCards).toFixed(2);
     $('topScores').innerHTML=topScores(state.model);
     renderMarkets();renderSelectedCombo();$('comboSuggestions').innerHTML='';
-    $('modelWarning').textContent=state.model.useHomeXG&&state.model.useAwayXG?'Modelo usando xG (ESPN) como base del λ. Ajuste por tiros omitido (xG ya incorpora calidad del tiro). Tarjetas y primera parte son aproximaciones.':state.model.useHomeXG||state.model.useAwayXG?'xG disponible para un equipo; modelo mixto.':'xG obtenido pero cobertura insuficiente (<5 partidos). Modelo sigue usando goles reales.';
+    $('modelWarning').textContent=state.model.useHomeXG&&state.model.useAwayXG?'Modelo usando xG (FBref) como base del λ. Ajuste por tiros omitido (xG ya incorpora calidad del tiro). Tarjetas y primera parte son aproximaciones.':state.model.useHomeXG||state.model.useAwayXG?'xG disponible para un equipo; modelo mixto.':'xG obtenido pero cobertura insuficiente (<5 partidos). Modelo sigue usando goles reales.';
     statusEl.textContent=`xG obtenido: ${homeHits}/${state.homeRows.length} de ${state.homeName}, ${awayHits}/${state.awayRows.length} de ${state.awayName}. Modelo recalculado.`;
   }catch(err){statusEl.textContent='Error: '+err.message}
   finally{$('enrichXG').disabled=false}
